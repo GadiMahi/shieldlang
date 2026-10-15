@@ -1,0 +1,8 @@
+[
+  {"name": "Attack on NESTED (exponential in re)", "request": {"method": "POST", "path": "/lab",
+    "body": {"a": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!"}}},
+  {"name": "Attack on WORDS", "request": {"method": "POST", "path": "/lab",
+    "body": {"c": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a!"}}},
+  {"name": "Valid values", "request": {"method": "POST", "path": "/lab",
+    "body": {"a": "aaaa", "b": "mahi.gadi@vit.ac", "g": "abcdefghij0123456789xyz"}}}
+]

@@ -1,0 +1,19 @@
+// Regex lab: classic real-world ReDoS patterns, analysed and repaired by RegexShield v2.
+
+pattern NESTED      = /^(a+)+$/;                       // textbook exponential case
+pattern EMAIL_BAD   = /^([a-zA-Z0-9_-]+\.?)+@[a-z]+\.[a-z]{2,6}$/;
+pattern WORDS       = /^(\w+\s?)*$/;                   // Stack Overflow 2016 outage family
+pattern DIGITS      = /^(\d|[0-9])+$/;                 // overlapping alternatives
+pattern ADJACENT    = /^\d+\d+$/;                      // polynomial O(n^2)
+pattern CSV_LINE    = /^(.*,)*end$/;                   // nested .* (Cloudflare-style)
+pattern SAFE_TOKEN  = /^[A-Za-z0-9_-]{20,64}$/;        // safe
+
+rule Lab on POST "/lab" {
+  field a? : string matches NESTED;
+  field b? : string matches EMAIL_BAD;
+  field c? : string matches WORDS;
+  field d? : string matches DIGITS;
+  field e? : string matches ADJACENT;
+  field f? : string matches CSV_LINE;
+  field g? : string matches SAFE_TOKEN;
+}

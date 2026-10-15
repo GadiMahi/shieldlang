@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShieldLang Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%23121212'/%3E%3Cpath d='M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z' fill='%232448D8'/%3E%3Cpath d='M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z' fill='%237B1E3C'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z" fill="#F3ECE0"/>
+        <path d="M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z" fill="#2448D8"/>
+        <path d="M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z" fill="#7B1E3C"/>
+      </svg>
+      <div>
+        <div class="brand-name">ShieldLang <span>Studio</span></div>
+        <div class="brand-sub">A compiler for provably safe API security rules</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <label class="select-wrap" title="Load an example program">
+        <span>Example</span>
+        <select id="example-select"></select>
+      </label>
+      <label class="toggle" title="Recompile automatically while typing">
+        <input type="checkbox" id="live-toggle" checked>
+        <span class="toggle-ui"></span><span>Live</span>
+      </label>
+      <button class="btn btn-ghost" id="btn-download-py" title="Download generated Python validator">.py</button>
+      <button class="btn btn-ghost" id="btn-download-js" title="Download generated JavaScript validator">.js</button>
+      <button class="btn btn-primary" id="btn-compile" title="Compile (Ctrl/⌘ + Enter)">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
+        Compile
+      </button>
+    </div>
+  </header>
+
+  <nav class="pipeline" id="pipeline" aria-label="Compiler phases"></nav>
+
+  <main class="workspace">
+    <section class="editor-col">
+      <div class="card editor-card">
+        <div class="card-head editor-head">
+          <div class="file-tab"><span class="dot"></span><span id="file-name">payments.shl</span></div>
+          <div class="editor-meta"><span id="cursor-pos">Ln 1, Col 1</span><span id="diag-counts"></span></div>
+        </div>
+        <div class="editor" id="editor">
+          <div class="gutter" id="gutter"></div>
+          <div class="code-area">
+            <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+            <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="card diag-card">
+        <div class="card-head"><h3>Diagnostics</h3><span class="muted small" id="diag-summary"></span></div>
+        <div class="diag-list" id="diag-list"></div>
+      </div>
+    </section>
+
+    <section class="panel-col">
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <div class="panel" id="panel"></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

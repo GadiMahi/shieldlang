@@ -1,0 +1,41 @@
+// ShieldLang — security rules for a payments API
+// Compile:  python shieldlang.py compile examples/payments.shl
+
+const MAX_AMOUNT = 100000;
+const MAX_BODY   = 16 KB;
+
+pattern TOKEN = /^Bearer [A-Za-z0-9._-]+$/;
+pattern UPI   = /^[a-z0-9.]+@[a-z]+$/;
+pattern SQLI  = /(union|select|insert|drop).*(from|into|table)/i;
+
+rule CreatePayment on POST "/api/pay" {
+  header Authorization : string matches TOKEN maxlen 512;
+  field  upi_id        : string matches UPI maxlen 64;
+  field  amount        : number in 1..MAX_AMOUNT;
+  field  method        : enum("upi", "card");
+  field  card_number?  : string matches /^[0-9]{16}$/ maxlen 32;
+  field  note?         : string maxlen 140;
+
+  when method == "card" require card_number;
+  when amount > 50000 require note;
+  when amount > MAX_AMOUNT require note;     // bug: can never be true -> warning + removed
+
+
+  body max_depth 5 max_size MAX_BODY;
+  block if any field matches SQLI as "SQL injection attempt";
+  block if any field matches /<script|javascript:/i as "XSS attempt";
+}
+
+rule GetUser on GET "/api/users/{id}" {
+  param  id       : int in 1..999999;
+  query  fields?  : list<string> maxitems 10;
+  header "X-Request-Id" : string matches /^[a-f0-9-]{36}$/;
+}
+
+rule Signup on POST "/api/signup" {
+  field email    : string matches /^([a-zA-Z0-9]+\.?)+@[a-z]+\.[a-z]{2,6}$/ maxlen 254;
+  field username : string matches /^[a-z0-9_]{3,16}$/;
+  field password : string minlen 8 maxlen 128 matches /[0-9]/ matches /[A-Z]/;
+  field tags?    : list<string> maxitems 5;
+  block if username matches /^(admin|root)$/ as "reserved username";
+}

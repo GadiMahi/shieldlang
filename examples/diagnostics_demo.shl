@@ -1,0 +1,26 @@
+// Diagnostics demo: every rule below contains a mistake the compiler catches.
+
+const LIMIT = 10 KB;
+
+pattern WEAK_EMAIL = /^([a-z0-9]+\.?)+@[a-z]+$/;       // exponential ReDoS -> verified rewrite
+pattern ID         = /^[0-9]{6}$/;
+
+rule Transfer on POST "/api/transfer" {
+  field amount   : number in 5000..100;               // empty range
+  field currency : enum("INR", "USD");
+  field pin      : string matches ID maxlen 4;         // pattern needs 6 chars, maxlen is 4
+  field code     : string matches /^[a-z]+$/ matches /^[0-9]+$/;   // mutually exclusive patterns
+  field memo     : int maxlen 20;                      // maxlen on an int
+  when currency == "EUR" require memo;                 // "EUR" is not in the enum
+  when amount > 100 forbid currency;                   // forbids a required field
+  block if any field matches UNKNOWN;                  // undefined pattern
+}
+
+rule Transfer on POST "/api/transfer" {                // duplicate rule + route conflict
+  field to : string matches /(a+)+$/;
+}
+
+rule Lookup on GET "/api/item/{sku}" {
+  param id : int;                                      // 'id' is not in the path
+  query q  : string matches /^\bfoo/;                  // \b is not regular
+}
