@@ -1,0 +1,7 @@
+// The smallest useful ShieldLang program: an OTP check.
+
+rule VerifyOTP on POST "/verify" {
+  field phone : string matches /^[0-9]{10}$/;
+  field otp   : string matches /^[0-9]{6}$/ maxlen 10;
+  field name? : string matches /^(\w+\s?)*$/;
+}

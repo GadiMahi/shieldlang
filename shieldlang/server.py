@@ -59,7 +59,7 @@ def _compiled(source: str, name: str):
 
 def examples():
     out = []
-    order = ["payments", "regex_lab", "diagnostics_demo"]
+    order = ["simple", "payments", "regex_lab", "diagnostics_demo"]
     files = sorted(EXAMPLES.glob("*.shl"), key=lambda p: (order.index(p.stem) if p.stem in order else 99, p.stem))
     for f in files:
         req = EXAMPLES / f"{f.stem}.requests.json"

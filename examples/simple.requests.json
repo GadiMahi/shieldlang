@@ -1,0 +1,5 @@
+[
+  {"name": "Good request", "request": {"method": "POST", "path": "/verify", "body": {"phone": "9876543210", "otp": "123456", "name": "Mahi Gadi"}}},
+  {"name": "Wrong OTP format", "request": {"method": "POST", "path": "/verify", "body": {"phone": "98765", "otp": "12ab"}}},
+  {"name": "Attack on name", "request": {"method": "POST", "path": "/verify", "body": {"phone": "9876543210", "otp": "123456", "name": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a!"}}}
+]
