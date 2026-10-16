@@ -1,0 +1,155 @@
+/* Shared layout for Protocol Studio / Traffic Lab / Bypass Lab. Reuses app.css's design tokens.
+   NOTE: app.css (the original Studio) locks the body to 100vh/overflow:hidden on desktop and styles #source as an
+   absolutely-positioned overlay. Lab pages must opt out of both: they use body.lab and never reuse id="source". */
+html:has(body.lab) { height: auto; }
+body.lab { height: auto !important; min-height: 100vh; overflow: visible !important; display: block; }
+
+/* ---------- top bar ---------- */
+.lab-topbar { position: sticky; top: 0; z-index: 20; background: var(--ink); color: var(--paper); display: flex; align-items: center;
+  justify-content: space-between; gap: 16px; padding: 10px 24px; border-bottom: 1px solid #000; flex-wrap: wrap; }
+.lab-brand { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 18px; }
+.lab-brand span.tag { color: #b8ad9c; font-size: 12px; font-family: var(--sans); margin-left: 6px; }
+.lab-nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.lab-nav a { color: #cfc6b6; text-decoration: none; font-size: 13px; padding: 7px 11px; border-radius: var(--radius-sm); }
+.lab-nav a:hover { background: var(--ink-3); color: var(--paper); }
+.lab-nav a[aria-current="page"] { background: var(--blue); color: #fff; }
+
+/* ---------- page frame ---------- */
+.lab-main { max-width: 1240px; margin: 0 auto; padding: 22px 24px 70px; width: 100%; }
+.lab-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.lab-col { min-width: 0; }
+.lab-col > .lab-card:last-child { margin-bottom: 0; }
+.lab-col-title { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 920px) { .lab-grid { grid-template-columns: minmax(0, 1fr); } .lab-topbar { padding: 10px 14px; } .lab-main { padding: 16px 14px 50px; } }
+
+/* ---------- hero / explanation ---------- */
+.lab-hero { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 18px; box-shadow: var(--shadow); }
+.lab-hero h1 { font-family: var(--serif); font-size: 28px; margin: 0 0 8px; letter-spacing: -.02em; }
+.lab-hero .lead { font-size: 15px; line-height: 1.6; color: var(--text); margin: 0 0 12px; max-width: 78ch; }
+.lab-hero .fine { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; max-width: 90ch; }
+.lab-flow { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 14px 0 0; counter-reset: flow; }
+.lab-flow li { counter-increment: flow; display: flex; align-items: center; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 12px 5px 6px; font-size: 12.5px; }
+.lab-flow li::before { content: counter(flow); display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 700; }
+.lab-flow li.done { background: #e3f3e6; border-color: #b8dcc2; }
+.lab-flow li.done::before { content: "✓"; background: #1d6b32; }
+.lab-flow li.now { background: var(--blue-soft); border-color: var(--blue-line); font-weight: 600; }
+.lab-flow li.now::before { background: var(--blue); }
+
+.lab-help { border-left: 3px solid var(--blue-line); background: var(--blue-soft); color: #22306e; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 8px 12px; font-size: 12.5px; line-height: 1.55; margin: 0 0 12px; }
+.lab-help b { color: var(--blue-2); }
+.lab-help ul { margin: 6px 0 0; padding-left: 18px; }
+.lab-help li { margin: 2px 0; }
+.lab-help.warn { border-left-color: #e0cd8f; background: var(--ochre-soft); color: #5f4410; }
+
+.lab-gloss { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); padding: 2px 14px; }
+.lab-gloss > summary { padding: 8px 0; font-weight: 600; color: var(--text); font-size: 13px; }
+.lab-gloss dl { margin: 4px 0 10px; display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; font-size: 12.5px; }
+.lab-gloss dt { font-weight: 700; color: var(--text); }
+.lab-gloss dd { margin: 0; color: var(--muted); line-height: 1.5; }
+@media (max-width: 640px) { .lab-gloss dl { grid-template-columns: 1fr; } .lab-gloss dd { margin-bottom: 6px; } }
+
+/* ---------- cards ---------- */
+.lab-card { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.lab-card h2, .lab-card h3 { margin: 0 0 8px; }
+.lab-card h2 { font-size: 17px; display: flex; align-items: center; gap: 10px; }
+.lab-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.lab-card .step-no { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--paper);
+  font-size: 12px; font-weight: 700; flex: none; }
+.lab-card.locked { background: var(--paper); box-shadow: none; }
+.lab-card.locked > :not(h2):not(.lock-note) { opacity: .5; }
+.lab-card .lock-note { display: none; font-size: 12.5px; color: var(--ochre); background: var(--ochre-soft); border: 1px solid #e0cd8f; border-radius: var(--radius-sm); padding: 6px 10px; margin: 0 0 10px; }
+.lab-card.locked .lock-note { display: block; }
+fieldset.lab-fs { border: 0; padding: 0; margin: 0; min-width: 0; }
+
+.lab-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+.lab-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; flex: 1 1 160px; }
+.lab-field input, .lab-field select, .lab-field textarea, select.lab-select { font: 13px var(--sans); padding: 7px 9px; border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm); background: var(--white); color: var(--text); font-weight: 400; }
+.lab-field textarea { font-family: var(--mono); min-height: 64px; resize: vertical; }
+.lab-field { min-width: 0; }
+.lab-field input, .lab-field select, .lab-field textarea { min-width: 0; max-width: 100%; width: 100%; }
+.lab-field input[type=checkbox] { width: 18px !important; height: 18px; min-width: 18px; }
+.lab-field .hint { font-weight: 400; color: var(--muted-2); font-size: 11.5px; }
+
+/* the code editor: an ordinary dark textarea INSIDE its card (never positioned over the page) */
+.lab-editor { display: block; width: 100%; min-height: 240px; height: 300px; resize: vertical; margin: 6px 0 0; padding: 12px 14px; border: 1px solid #000;
+  border-radius: var(--radius-sm); background: var(--ed-bg); color: var(--ed-text); font: 12.5px/1.65 var(--mono); tab-size: 2; white-space: pre; overflow: auto; }
+.lab-editor:focus { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* ---------- buttons / badges ---------- */
+.btn { border: 1px solid transparent; border-radius: var(--radius-sm); padding: 7px 13px; font: 13px var(--sans); font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: var(--blue-2); }
+.btn-primary:disabled, .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-ghost { background: var(--paper-2); color: var(--text); border-color: var(--line-2); }
+.btn-ghost:hover { background: var(--paper-3); }
+.btn-wine { background: var(--wine); color: #fff; }
+.btn-sm { padding: 4px 9px; font-size: 12px; }
+.lab-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.lab-chips .btn { font-weight: 500; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.badge-allow { background: #e3f3e6; color: #1d6b32; }
+.badge-deny { background: var(--wine-soft); color: var(--wine-2); }
+.badge-unknown { background: var(--ochre-soft); color: var(--ochre); }
+.badge-observe { background: var(--blue-soft); color: var(--blue-2); }
+.badge-muted { background: var(--paper-2); color: var(--muted); }
+
+/* ---------- tables / pre ---------- */
+.lab-scroll { overflow-x: auto; }
+.lab-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.lab-table th, .lab-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.lab-table th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
+.lab-table tr:hover td { background: var(--paper); }
+.lab-table td.mono { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.lab-pre { background: var(--ed-bg); color: var(--ed-text); border-radius: var(--radius-sm); padding: 10px; font-family: var(--mono); font-size: 12px;
+  overflow: auto; max-height: 260px; white-space: pre-wrap; word-break: break-word; margin: 6px 0; }
+
+/* ---------- protocol graph ---------- */
+.lab-graph { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-family: var(--mono); font-size: 12.5px; }
+.lab-node { border: 2px solid var(--line-2); border-radius: 999px; padding: 6px 14px; background: var(--white); }
+.lab-node.initial { border-color: var(--blue); }
+.lab-node.terminal { border-color: var(--wine); font-weight: 700; }
+.lab-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); margin: 8px 0 4px; }
+.lab-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line-2); margin-right: 5px; vertical-align: -1px; }
+.lab-legend i.initial { border-color: var(--blue); } .lab-legend i.terminal { border-color: var(--wine); }
+.lab-edges { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; font-size: 13px; }
+.lab-edges li { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; background: var(--paper); border-radius: var(--radius-sm); padding: 6px 10px; }
+.lab-edges code { font-family: var(--mono); font-size: 12px; background: var(--white); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+.lab-edge { color: var(--muted); }
+
+/* ---------- status strip / banners / misc ---------- */
+.lab-status { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.lab-status .chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; }
+.lab-status .chip b { color: var(--muted); font-weight: 600; }
+.lab-status .chip.ok { border-color: #b8dcc2; background: #e3f3e6; }
+.lab-status .chip.bad { border-color: var(--wine-line); background: var(--wine-soft); }
+.lab-status .chip.warn { border-color: #e0cd8f; background: var(--ochre-soft); }
+.lab-banner { border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.lab-banner.warn { background: var(--ochre-soft); color: var(--ochre); border: 1px solid #e0cd8f; }
+.lab-banner.err { background: var(--wine-soft); color: var(--wine-2); border: 1px solid var(--wine-line); }
+.lab-banner.ok { background: #e3f3e6; color: #1d6b32; border: 1px solid #b8dcc2; }
+.lab-explain { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; line-height: 1.55; margin-top: 10px; }
+.lab-explain .what { font-weight: 700; display: block; margin-bottom: 2px; }
+.lab-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+.lab-footnote { color: var(--muted-2); font-size: 11.5px; margin-top: 4px; }
+.lab-matrix { border-collapse: collapse; font-size: 12.5px; margin: 6px 0; }
+.lab-matrix th, .lab-matrix td { border: 1px solid var(--line-2); padding: 8px 12px; text-align: center; }
+.lab-matrix th { background: var(--paper); font-size: 11.5px; color: var(--muted); }
+.lab-matrix td b { display: block; font-size: 20px; }
+.skip-link { position: absolute; left: -999px; } .skip-link:focus { left: 10px; top: 10px; background: #fff; padding: 6px 10px; z-index: 30; }
+
+/* ---------- diagnostic-row-to-source navigation (Protocol Studio) ---------- */
+.lab-diagrow { cursor: pointer; }
+.lab-diagrow:hover { background: var(--paper); }
+.lab-diagrow:focus-within { outline: 2px solid var(--accent, #2563eb); outline-offset: -2px; }
+.lab-linecell { background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit;
+  text-decoration: underline; text-decoration-style: dotted; cursor: pointer; }
+.lab-linecell:hover, .lab-linecell:focus-visible { color: var(--accent, #2563eb); }
+.lab-editor.lab-flash { box-shadow: 0 0 0 3px var(--ochre-soft) inset, 0 0 0 2px #e0cd8f; transition: box-shadow 0.15s; }
+
+/* A long unbroken code sample (e.g. a JSON shape with no spaces) must wrap, not push the page wider than the viewport. */
+.lab-help code, .lab-footnote code, .lab-explain code { overflow-wrap: anywhere; word-break: break-word; }

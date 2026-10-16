@@ -53,6 +53,7 @@ const S = {
   examples: [], ex: null, name: "rules.shl", source: "", res: null, tab: "overview", compiling: false,
   pending: false, focus: null, rxSel: null, rxProbe: null, rxView: "dfa", irView: "opt", codeLang: "py",
   runText: "", runRes: null, preset: -1, bench: null, benchSel: null, benchBusy: false, roundtrip: 0,
+  compareBefore: null, compareResult: null, compareBusy: false,
 };
 
 /* ----------------------------------------------------------- highlighter */
@@ -219,6 +220,7 @@ function hoverable(el, span) {
 let compileTimer = null;
 function onInput() {
   S.source = ta().value;
+  S.compareResult = null;
   S.focus = null;
   $(".file-tab").classList.add("dirty");
   renderEditor();
@@ -271,7 +273,8 @@ async function compile() {
 /* -------------------------------------------------------------- pipeline */
 const PHASES = [
   ["lexer", "Lexer", "tokens"], ["parser", "Parser", "ast"], ["semantic", "Semantic", "symbols"],
-  ["regex", "RegexShield", "regex"], ["ir", "IR", "ir"], ["optimizer", "Optimiser", "opt"], ["codegen", "Codegen", "code"],
+  ["regex", "RegexShield", "regex"], ["ir", "IR", "ir"], ["optimizer", "Optimiser", "opt"],
+  ["verification", "Verification", "verification"], ["codegen", "Codegen", "code"],
 ];
 
 function renderPipeline(busy = false) {
@@ -324,7 +327,8 @@ function renderDiagnostics() {
 
 /* ------------------------------------------------------------------ tabs */
 const TABS = [
-  ["overview", "Overview"], ["tokens", "Tokens"], ["ast", "AST"], ["symbols", "Symbols"], ["regex", "RegexShield"],
+  ["overview", "Overview"], ["verification", "Verification"], ["compare", "Policy changes"],
+  ["tokens", "Tokens"], ["ast", "AST"], ["symbols", "Symbols"], ["regex", "RegexShield"],
   ["ir", "IR"], ["opt", "Optimiser"], ["code", "Code"], ["run", "Run"], ["bench", "Benchmark"],
 ];
 
@@ -346,7 +350,7 @@ function renderTabs() {
       const bad = (r.report.counts.HIGH || 0) + (r.report.counts.MEDIUM || 0);
       badge = h("span", { class: `badge-n ${bad ? "wine" : ""}` }, bad ? `${bad} risky` : Object.keys(r.regexes || {}).length);
     }
-    el.append(h("button", { class: `tab ${S.tab === key ? "active" : ""}`, role: "tab", onclick: () => setTab(key) }, label, badge));
+    el.append(h("button", { class: `tab ${S.tab === key ? "active" : ""}`, role: "tab", "aria-selected": String(S.tab === key), onclick: () => setTab(key) }, label, badge));
   }
 }
 
@@ -356,7 +360,7 @@ function renderPanel() {
   panel.innerHTML = "";
   if (!S.res) { panel.append(h("div", { class: "empty" }, h("span", { class: "spinner" }), " Compiling…")); return; }
   const fn = { overview: pOverview, tokens: pTokens, ast: pAst, symbols: pSymbols, regex: pRegex, ir: pIr, opt: pOpt,
-    code: pCode, run: pRun, bench: pBench }[S.tab];
+    code: pCode, run: pRun, bench: pBench, verification: pVerification, compare: pCompare }[S.tab];
   panel.append(fn());
   panel.scrollTop = renderPanel.keepScroll ? scroll : 0;
   renderPanel.keepScroll = false;
@@ -386,7 +390,7 @@ function pOverview() {
   const totalMs = Object.values(r.timings_ms).reduce((a, b) => a + b, 0);
   if (r.ok) {
     root.append(h("div", { class: "banner ok" }, h("div", { class: "b-icon" }, "✓"),
-      h("div", {}, h("div", { class: "b-title" }, `Compiled ${r.rules.length} rule${r.rules.length === 1 ? "" : "s"} into linear-time validators`),
+      h("div", {}, h("div", { class: "b-title" }, `Compiled ${r.rules.length} rule${r.rules.length === 1 ? "" : "s"} with DFA pattern checks`),
         h("div", { class: "b-sub" }, `${r.name} · ${r.tokens.length - 1} tokens · ${fmtMs(totalMs)} compile time · Python + JavaScript output`))));
   } else {
     root.append(h("div", { class: "banner bad" }, h("div", { class: "b-icon" }, "!"),
@@ -403,8 +407,15 @@ function pOverview() {
     r.opt_ir ? kpi("IR instructions", `${r.ir.instructions}→${r.opt_ir.instructions}`, `cost ${r.ir.cost}→${r.opt_ir.cost} (−${Math.round(100 - (100 * r.opt_ir.cost) / Math.max(1, r.ir.cost))}%)`) : null,
     kpi("Diagnostics", `${errs.length} / ${r.diagnostics.length - errs.length}`, "errors / warnings & info"));
   root.append(kp);
+  if (r.ok) root.append(h("div", { class: "review-actions" },
+    h("button", { class: "review-action", onclick: () => setTab("verification") },
+      h("span", { class: "eyebrow" }, "Inspect the compiler"), h("strong", {}, "Did optimization preserve field acceptance?"),
+      h("span", {}, `${r.verification?.counts?.equivalent || 0} string fields checked · inspect coverage →`)),
+    h("button", { class: "review-action", onclick: () => setTab("compare") },
+      h("span", { class: "eyebrow" }, "Understand a policy change"), h("strong", {}, "Show a request that changes its verdict"),
+      h("span", {}, "Compare two versions and replay a counterexample →"))));
   if (r.ok) root.append(h("div", { class: "guarantee" }, h("b", {}, "Guarantee"),
-    "Every generated validator matches patterns with minimised DFAs: one table lookup per character, worst case O(n), no backtracking — even for the patterns flagged below."));
+    "Generated pattern checks use DFAs and do not backtrack. This guarantee applies to matching, not every compiler phase or surrounding request operation. Verification coverage is reported separately."));
 
   // security report
   if (rep.regexes.length) {
@@ -446,6 +457,102 @@ function pOverview() {
 
 function kpi(label, value, sub, cls = "") {
   return h("div", { class: `kpi ${cls}` }, h("div", { class: "k-label" }, label), h("div", { class: "k-value" }, value), sub ? h("div", { class: "k-sub" }, sub) : null);
+}
+
+/* ------------------------------------------- verification & policy changes */
+function comparisonTable(checks) {
+  const rows = checks.map((c) => h("tr", {},
+    h("td", { class: "mono" }, `${c.method} ${c.path}`),
+    h("td", { class: "mono" }, `${c.source} ${c.field}`),
+    h("td", {}, h("span", { class: `check-status ${c.status}` }, c.status)),
+    h("td", { class: "small" }, c.reason || `${c.states ?? 0} states explored${c.complete ? " · search complete" : ""}`),
+    h("td", { class: "mono small" }, (c.examples || []).map((e) => e.missing ? "missing field" : JSON.stringify(e.value)).join(" / "))));
+  return h("div", { class: "table-wrap" }, h("table", { class: "t" },
+    h("thead", {}, h("tr", {}, ["Route", "Field", "Result", "Coverage", "Example"].map((x) => h("th", {}, x)))), h("tbody", {}, rows)));
+}
+
+function pVerification() {
+  const report = S.res?.verification;
+  if (!report?.checks) {
+    if (!S.res?.ok) return needOk("verification results");
+    return h("div", { class: "panel-inner" },
+      title("Restart Studio to enable verification", "The running server does not provide verification results. Stop Studio in its terminal, start it again, then compile this policy."),
+      h("div", { class: "scope-note" }, "The policy compiled successfully. Verification coverage is unavailable from this server session."));
+  }
+  const counts = report.counts;
+  return h("div", { class: "panel-inner" },
+    title("Check the transformation", "An independent graph search compares supported string fields before and after optimization. A counterexample stops code generation. Unsupported fields and exhausted budgets are shown explicitly."),
+    h("div", { class: "stats" },
+      h("div", { class: "stat" }, "equivalent fields", h("b", {}, counts.equivalent)),
+      h("div", { class: "stat" }, "differences", h("b", {}, counts.different)),
+      h("div", { class: "stat" }, "inconclusive", h("b", {}, counts.inconclusive)),
+      h("div", { class: "stat" }, "unsupported", h("b", {}, counts.unsupported))),
+    h("div", { class: "card" }, h("div", { class: "card-head" }, h("h3", {}, "Field acceptance checks")),
+      report.checks.length ? comparisonTable(report.checks) : h("div", { class: "card-body" }, "No scalar string fields to check.")),
+    h("div", { class: "scope-note" }, h("strong", {}, "What this establishes"),
+      h("p", {}, report.scope), h("strong", {}, "Outside this check"),
+      h("p", {}, report.exclusions.join(" · "))),
+    h("button", { class: "btn btn-light", onclick: () => download("verification.json", JSON.stringify(report, null, 2)) }, "Download verification report"));
+}
+
+async function compareCurrentPolicy() {
+  if (S.compareBusy) return;
+  const before = S.compareBefore ?? S.source, after = S.source;
+  S.compareBefore = before;
+  S.compareBusy = true;
+  S.compareResult = null;
+  renderPanel();
+  try {
+    const result = await api("/api/compare", { before, after });
+    if (S.source === after && S.compareBefore === before) S.compareResult = result;
+    else toast("Policy changed during comparison; compare again.");
+  } catch (e) { toast("Comparison failed: " + e.message); }
+  finally { S.compareBusy = false; if (S.tab === "compare") renderPanel(); }
+}
+
+function pCompare() {
+  const root = h("div", { class: "panel-inner" },
+    title("What changed?", "Compare a baseline with the policy in the main editor. String-field differences produce candidates; only requests whose verdicts differ when replayed through both full VMs appear as request witnesses."));
+  const baseline = h("textarea", { class: "json compare-source", spellcheck: "false", "aria-label": "Baseline policy", oninput: (e) => {
+    S.compareBefore = e.target.value; S.compareResult = null;
+    // Keep the editor caret stable, but remove results for an obsolete baseline.
+    root.querySelector(".comparison-results")?.remove();
+  } }, S.compareBefore ?? S.source);
+  root.append(h("div", { class: "card" }, h("div", { class: "card-head" }, h("h3", {}, "Baseline policy")),
+    h("div", { class: "card-body" }, baseline)));
+  root.append(h("div", { class: "flex" },
+    h("button", { class: "btn btn-primary", disabled: S.compareBusy, onclick: compareCurrentPolicy }, S.compareBusy ? "Comparing…" : "Compare with main editor"),
+    h("button", { class: "btn btn-light", onclick: () => { S.compareBefore = S.source; S.compareResult = null; renderPanel(); } }, "Use current as baseline"),
+    h("button", { class: "btn btn-light", onclick: () => {
+      const a = S.examples.find((x) => x.name === "policy_before.shl"), b = S.examples.find((x) => x.name === "policy_after.shl");
+      if (!a || !b) return toast("Comparison examples are unavailable");
+      S.compareBefore = a.source; S.compareResult = null;
+      loadExample(b); renderPanel();
+      $("#example-select").value = String(S.examples.indexOf(b));
+    } }, "Load comparison demo")));
+  const result = S.compareResult;
+  if (!result) return root;
+  const results = h("div", { class: "comparison-results" });
+  root.append(results);
+  if (result.status === "compile_error") {
+    results.append(h("div", { class: "scope-note" }, "One policy has compile errors. Fix them before comparison.",
+      h("pre", {}, JSON.stringify({ before: result.before, after: result.after }, null, 2))));
+    return root;
+  }
+  results.append(h("div", { class: "scope-note" }, h("strong", {}, `${result.witnesses.length} request witness(es)`),
+    h("p", {}, result.note), h("p", {}, "Whole-program equivalence is not checked. No witness is not a proof of no behavioral change.")));
+  for (const witness of result.witnesses) {
+    results.append(h("div", { class: "card witness-card" }, h("div", { class: "card-head" },
+      h("h3", {}, `${witness.allowed_before ? "Allowed" : "Denied"} before → ${witness.allowed_after ? "Allowed" : "Denied"} after`),
+      h("span", { class: "pill ink" }, "Replayed on both VMs")), h("div", { class: "card-body" },
+      h("pre", { class: "witness-json" }, JSON.stringify(witness.request, null, 2)),
+      h("button", { class: "btn btn-light", onclick: () => {
+        S.runText = JSON.stringify(witness.request, null, 2); S.runRes = null; S.preset = -1; setTab("run");
+      } }, "Open request in Run"))));
+  }
+  results.append(h("div", { class: "card" }, h("div", { class: "card-head" }, h("h3", {}, "Field-level comparison")), comparisonTable(result.checks)),
+    h("button", { class: "btn btn-light", onclick: () => download("policy-comparison.json", JSON.stringify(result, null, 2)) }, "Download comparison"));
+  return root;
 }
 
 /* ---------------------------------------------------------------- tokens */
@@ -989,6 +1096,7 @@ function benchChart(b) {
 
 /* ------------------------------------------------------------------ boot */
 function loadExample(ex) {
+  S.compareResult = null;
   S.ex = ex;
   S.name = ex.name;
   S.source = ex.source;
@@ -1016,8 +1124,28 @@ async function boot() {
   }
   const sel = $("#example-select");
   S.examples.forEach((ex, i) => sel.append(h("option", { value: i }, ex.title)));
-  sel.addEventListener("change", () => loadExample(S.examples[+sel.value]));
-  if (S.examples.length) loadExample(S.examples[0]);
+  let handoff = null;
+  try {
+    const raw = sessionStorage.getItem("shieldlang.demo.handoff");
+    if (raw) {
+      sessionStorage.removeItem("shieldlang.demo.handoff");
+      const data = JSON.parse(raw);
+      if (data && typeof data.source === "string" && data.source.length <= 100000) handoff = data;
+    }
+  } catch (_) { /* Invalid or unavailable handoffs leave the normal Studio usable. */ }
+  const custom = handoff ? {name:"guided_policy.shl", source:handoff.source, requests:[]} : null;
+  if (custom) sel.append(h("option", {value:"guided-demo"}, "Guided demo policy"));
+  sel.addEventListener("change", () => {
+    const selected = sel.value === "guided-demo" ? custom : S.examples[Number(sel.value)];
+    if (selected) loadExample(selected);
+  });
+  if (custom) {
+    sel.value = "guided-demo";
+    S.tab = ["overview", "verification", "compare", "run"].includes(handoff.tab) ? handoff.tab : "overview";
+    loadExample(custom);
+    if (typeof handoff.compareBefore === "string" && handoff.compareBefore.length <= 100000) S.compareBefore = handoff.compareBefore;
+    if (handoff.request && typeof handoff.request === "object" && !Array.isArray(handoff.request)) S.runText = JSON.stringify(handoff.request,null,2);
+  } else if (S.examples.length) loadExample(S.examples[0]);
 }
 
 boot();

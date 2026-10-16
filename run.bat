@@ -8,4 +8,4 @@ echo   [3] Run the test suite
 set /p c="Choose [1]: "
 if "%c%"=="2" (python shieldlang.py compile examples\payments.shl --emit report & pause & exit /b)
 if "%c%"=="3" (python shieldlang.py test & pause & exit /b)
-python shieldlang.py serve
+py -3 shieldlang.py serve --port 8090

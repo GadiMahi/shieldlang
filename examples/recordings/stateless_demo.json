@@ -1,0 +1,6 @@
+{"name": "stateless_demo", "description": "Stateless policy only: valid and invalid order requests.",
+ "entries": [
+  {"id": "create_ok", "identity": "alice", "method": "POST", "path": "/api/orders", "body": {"client_ref": "r1", "item": "book"}, "save_as": "o1", "label": {"legitimate": true}},
+  {"id": "pay_ok", "identity": "alice", "method": "POST", "path": "/api/orders/{{o1}}/pay", "body": {"card_token": "tok_ok"}, "label": {"legitimate": true}},
+  {"id": "pay_bad_body", "identity": "alice", "method": "POST", "path": "/api/orders/{{o1}}/pay", "body": {"card_token": 5}, "label": {"legitimate": false}}
+ ]}

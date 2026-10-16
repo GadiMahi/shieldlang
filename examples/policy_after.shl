@@ -1,0 +1,7 @@
+// Compare with policy_before.shl: names are longer, but "pro" is removed.
+rule CreateAccount on POST "/api/accounts" {
+  // Two compatible pattern checks let the optimizer demonstrate DFA intersection.
+  field username : string matches /^[a-z]+$/ matches /^[a-z0-9]+$/ minlen 3 maxlen 12;
+  field tier : enum("basic", "team");
+  body max_depth 3 max_size 1024;
+}

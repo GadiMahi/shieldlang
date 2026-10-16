@@ -1,0 +1,6 @@
+// Review 2 demo: this version accepts only short lowercase account names.
+rule CreateAccount on POST "/api/accounts" {
+  field username : string matches /^[a-z]+$/ minlen 3 maxlen 8;
+  field tier : enum("basic", "pro");
+  body max_depth 3 max_size 1024;
+}

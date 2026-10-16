@@ -57,6 +57,8 @@ def cmd_compile(a) -> int:
             lines.append(f"[{p.name}] instrs {p.instrs_before}→{p.instrs_after}, cost {p.cost_before}→{p.cost_after}")
             lines += [f"    • {c}" for c in p.changes] or ["    (no change)"]
         out = "\n".join(lines)
+    elif a.emit == "verification":
+        out = json.dumps(res.verification, indent=2)
     elif a.emit == "report":
         rep = res.report()
         lines = [f"ShieldLang security report — {res.name}", "=" * 60]
@@ -133,6 +135,14 @@ def cmd_bench(a) -> int:
     return 0
 
 
+def cmd_compare(a) -> int:
+    from .verification import compare_policies
+    result = compare_policies(Path(a.before).read_text(encoding="utf-8"),
+                              Path(a.after).read_text(encoding="utf-8"))
+    print(json.dumps(result, indent=2))
+    return 1 if result["status"] == "compile_error" else 0
+
+
 def cmd_test(a) -> int:
     import unittest
     root = Path(__file__).resolve().parent.parent
@@ -156,7 +166,7 @@ def main(argv=None) -> int:
     c = sub.add_parser("compile", help="compile a .shl file")
     c.add_argument("file")
     c.add_argument("--emit", default="report",
-                   choices=["py", "js", "ir", "opt-ir", "tokens", "ast", "symbols", "report", "passes"])
+                   choices=["py", "js", "ir", "opt-ir", "tokens", "ast", "symbols", "report", "passes", "verification"])
     c.add_argument("-o", "--output")
     k = sub.add_parser("check", help="validate a JSON request against compiled rules")
     k.add_argument("file")
@@ -168,6 +178,9 @@ def main(argv=None) -> int:
     b = sub.add_parser("bench", help="benchmark backtracking vs DFA")
     b.add_argument("pattern")
     b.add_argument("--flags", default="")
+    d = sub.add_parser("compare", help="compare policy versions and replay counterexample requests")
+    d.add_argument("before")
+    d.add_argument("after")
     sub.add_parser("test", help="run the test suite")
     a = p.parse_args(argv)
     if a.cmd in (None, "serve"):
@@ -175,7 +188,7 @@ def main(argv=None) -> int:
         serve(getattr(a, "host", "127.0.0.1"), getattr(a, "port", 8080), not getattr(a, "no_browser", False))
         return 0
     return {"compile": cmd_compile, "check": cmd_check, "regex": cmd_regex, "bench": cmd_bench,
-            "test": cmd_test}[a.cmd](a)
+            "test": cmd_test, "compare": cmd_compare}[a.cmd](a)
 
 
 if __name__ == "__main__":

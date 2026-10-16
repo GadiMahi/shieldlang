@@ -405,16 +405,36 @@ textarea.json:focus { box-shadow: 0 0 0 2px var(--blue-line); }
 details > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
 .flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .grow { flex: 1; }
+.review-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.review-action { text-align: left; padding: 18px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--text); }
+.review-action:hover { border-color: var(--blue); }
+.review-action strong { font-family: var(--serif); font-size: 19px; font-weight: 500; }
+.review-action > span:last-child { color: var(--muted); font-size: 12px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .09em; color: var(--blue); font-size: 10px; font-weight: 700; }
+.scope-note { background: var(--blue-soft); border-left: 3px solid var(--blue); padding: 16px 18px; border-radius: 6px; line-height: 1.7; }
+.scope-note p { margin: 6px 0 0; }
+.scope-note pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.check-status { font-size: 11px; text-transform: uppercase; font-weight: 700; }
+.check-status.equivalent { color: var(--blue); }
+.check-status.different { color: var(--wine); }
+.check-status.unsupported, .check-status.inconclusive { color: var(--ochre); }
+.comparison-results { display: flex; flex-direction: column; gap: 16px; }
+.compare-source { min-height: 200px !important; }
+.witness-json { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 14px; }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 .hr { height: 1px; background: var(--line); }
 
 @media (min-width: 1101px) {
   body { height: 100vh; overflow: hidden; }
 }
 @media (max-width: 1100px) {
-  .workspace { grid-template-columns: 1fr; }
-  .panel { overflow: visible; }
-  .editor-card { min-height: 380px; }
-  .rx-layout, .run-layout, .two-col { grid-template-columns: 1fr; }
+  html, body { height: auto; }
+  .workspace { flex: none; display: flex; flex-direction: column; }
+  .editor-col, .panel-col { flex: none; min-height: auto; }
+  .panel { flex: none; overflow: visible; }
+  .tabs { flex: none; }
+  .editor-card { flex: none; height: 420px; min-height: 380px; }
+  .rx-layout, .run-layout, .two-col, .review-actions { grid-template-columns: 1fr; }
   .rx-list { position: static; }
 }
 @media (max-width: 640px) {

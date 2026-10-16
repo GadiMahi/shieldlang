@@ -67,7 +67,7 @@ class AutomataAlgorithms(unittest.TestCase):
     def test_minimisation_shrinks(self):
         art = compile_pattern(r"^(a|b)*abb$")
         self.assertLessEqual(art.dfa.n, art.raw_dfa.n)
-        self.assertEqual(len(art.dfa.accept_states()), 1)
+        self.assertEqual(len(art.dfa.accept_states()), 2)  # before/after the optional final LF
 
     def test_equivalence_and_counterexample(self):
         a = compile_pattern(r"^(a+)+$").dfa
@@ -79,8 +79,8 @@ class AutomataAlgorithms(unittest.TestCase):
         self.assertEqual(cex, "")
 
     def test_length_bounds(self):
-        self.assertEqual(compile_pattern(r"^\d{6}$").length_bounds, (6, 6))
-        self.assertEqual(compile_pattern(r"^a{2,4}b?$").length_bounds, (2, 5))
+        self.assertEqual(compile_pattern(r"^\d{6}$").length_bounds, (6, 7))
+        self.assertEqual(compile_pattern(r"^a{2,4}b?$").length_bounds, (2, 6))
         self.assertEqual(compile_pattern(r"^a+$").length_bounds, (1, None))
 
     def test_intersection_empty(self):

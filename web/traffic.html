@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShieldLang · Traffic Lab</title>
+<meta name="description" content="Replay a recorded request sequence through the local gateway, in enforce or observe-only mode, against the authoritative backend ledger.">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/lab_common.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%23121212'/%3E%3C/svg%3E">
+</head>
+<body class="lab" data-page="/traffic">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="lab-topbar">
+  <div class="lab-brand">Traffic Lab <span class="tag">replay recorded traffic · enforce or observe</span></div>
+  <span id="shared-nav"></span>
+</header>
+<main class="lab-main" id="main">
+
+  <section class="lab-hero" aria-labelledby="hero-h">
+    <h1 id="hero-h">Traffic Lab</h1>
+    <p class="lead">Take a <b>recording</b> — a fixed list of HTTP requests, some legitimate and some attacks — and replay it through a real local gateway that applies your
+      ShieldLang policy in front of a small demo backend. You get two independent answers: what the gateway <b>decided</b>, and what the backend actually <b>did</b>.
+      Comparing them is the point: a gateway that says “denied” but whose backend still changed state has failed, and the ledger is what proves it.</p>
+    <ol class="lab-flow">
+      <li>Pick a policy and a recording</li>
+      <li>Pick a mode</li>
+      <li>Run it</li>
+      <li>Compare decisions with the ledger</li>
+      <li>Export the evidence</li>
+    </ol>
+    <p class="fine">Everything runs on 127.0.0.1 only. Each run is stored on the server under a stable run id together with the exact versions (fingerprints) of the policy, recording and protocol that produced it.</p>
+    <details class="lab-gloss">
+      <summary>Plain-English glossary (click to open)</summary>
+      <dl>
+        <dt>Policy</dt><dd>The ShieldLang rules (and optionally a protocol) the gateway applies to each request.</dd>
+        <dt>Recording</dt><dd>A saved, ordered list of requests with their callers. Some entries carry an author-supplied <b>label</b>: legitimate, or illegitimate (an attack).</dd>
+        <dt>Enforce</dt><dd>The gateway blocks what the policy forbids. A denied request is never forwarded.</dd>
+        <dt>Observe-only</dt><dd>The gateway forwards <i>everything</i> and just records what it <i>would</i> have decided. Those “would” values are predictions: the backend still received the request, so the ledger may show effects enforcement would have prevented.</dd>
+        <dt>Decision vs Would</dt><dd><b>Decision</b> is what actually happened to the request (allow / deny / forwarded / unknown). <b>Would</b> is only filled in for observe-only runs.</dd>
+        <dt>Backend ledger</dt><dd>The demo backend's own log of effects. It is the ground truth: it doesn't consult the gateway or the protocol runtime.</dd>
+        <dt>Evaluation matrix</dt><dd>Counts only labelled entries. “Blocked” = denied (enforce) or would-be-denied (observe). <b>TP</b>: attack blocked · <b>FN</b>: attack let through · <b>FP</b>: legitimate request blocked · <b>TN</b>: legitimate request allowed.</dd>
+        <dt>Latency</dt><dd>Per-request time through the gateway on this machine — useful for comparing modes, not a benchmark.</dd>
+        <dt>Run id / fingerprints</dt><dd>Stable identifiers. Re-opening a past run shows exactly the versions it was run against, even if you've since edited the policy.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <div id="banner-area"></div>
+
+  <section class="lab-card">
+    <h2><span class="step-no">1</span> Choose what to replay</h2>
+    <p class="lab-help"><b>Tip:</b> for a first run, choose the <i>checkout_attacks</i> recording with the Checkout protocol, run it in <b>Enforce</b>, then run it again in <b>Observe-only</b> and compare the ledgers.
+      Only policies whose rules actually match the demo backend's order routes can be usefully replayed here — the Policy dropdown says so for each one.</p>
+    <div class="lab-row">
+      <label class="lab-field" style="flex:1 1 220px">Policy
+        <select id="policy-select"></select>
+        <span class="hint" id="policy-hint"></span>
+      </label>
+      <label class="lab-field" style="flex:1 1 170px">Protocol (optional)
+        <select id="protocol-select"><option value="">(none — rules only, stateless)</option></select>
+      </label>
+      <label class="lab-field" style="flex:1 1 200px">Recording
+        <select id="recording-select"></select>
+      </label>
+      <label class="lab-field" style="flex:1 1 170px">Mode
+        <select id="mode-select"><option value="enforce">Enforce (block violations)</option><option value="observe">Observe-only (forward all)</option></select>
+      </label>
+      <button class="btn btn-primary" id="btn-run">Run recording</button>
+    </div>
+    <div class="lab-explain" id="mode-explain"></div>
+    <p class="lab-footnote" id="mode-footnote"></p>
+    <details id="import-area" style="margin-top:12px">
+      <summary>Import your own recording (JSON)</summary>
+      <p class="lab-help">Paste a recording with the same shape as the bundled ones: <code>{"entries":[{"id","method","path","identity","body","label","fault","save_as"}, …]}</code>.
+        Paths must start with <code>/api/</code> (the demo backend's only routable prefix); headers besides Content-Type and a fixed set of fault values are not accepted.
+        <b>Check</b> validates without saving and reports every problem with its exact location; <b>Import</b> only succeeds once there are none.</p>
+      <textarea id="import-text" class="lab-editor" style="min-height:140px; height:160px" spellcheck="false" placeholder='{"name": "my_recording", "entries": [...]}'></textarea>
+      <div class="lab-row" style="margin-top:8px">
+        <button class="btn btn-ghost btn-sm" id="btn-check-recording">Check</button>
+        <button class="btn btn-primary btn-sm" id="btn-import-recording">Import</button>
+      </div>
+      <div id="import-result"></div>
+    </details>
+  </section>
+
+  <section class="lab-card">
+    <h2><span class="step-no">2</span> Entries <span id="run-versions" class="lab-footnote"></span></h2>
+    <p class="lab-help"><b>How to read it.</b> One row per replayed request. <b>Decision</b> is what happened; <b>Would</b> (observe-only) is what enforcement would have done;
+      <b>Label</b> is the recording author's own judgement of whether the request was legitimate — never inferred.</p>
+    <div id="entries-area" class="lab-empty">Nothing has run yet. Press “Run recording”.</div>
+  </section>
+
+  <div class="lab-grid">
+    <div class="lab-col">
+      <p class="lab-col-title">How well it did</p>
+
+      <section class="lab-card">
+        <h2>Evaluation (labelled entries only)</h2>
+        <p class="lab-help">Scores the gateway against the recording author's labels. “Blocked” means denied (enforce) or would-have-been-denied (observe).</p>
+        <div id="eval-area" class="lab-empty">—</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Latency</h2>
+        <p class="lab-help">Time per request through the gateway on this machine. Compare modes with each other; don't treat it as a benchmark.</p>
+        <div id="latency-area" class="lab-empty">—</div>
+      </section>
+    </div>
+
+    <div class="lab-col">
+      <p class="lab-col-title">What actually happened (independent evidence)</p>
+
+      <section class="lab-card">
+        <h2>Backend ledger</h2>
+        <p class="lab-help"><b>Ground truth.</b> The demo backend's own record of effects, read directly from it. A request the gateway “denied” must <i>not</i> appear here.
+          Violations (an effect the protocol forbids) are called out in red.</p>
+        <div id="ledger-area" class="lab-empty">—</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Protocol state (if a protocol was chosen)</h2>
+        <p class="lab-help">What the protocol runtime <i>believes</i> about each order at the end of the run. It is separate from the ledger on purpose: if the two disagree, the ledger wins.</p>
+        <div id="proto-area" class="lab-empty">—</div>
+      </section>
+
+      <section class="lab-card" id="bypass-handoff-card" hidden>
+        <h2>Bypass Lab evidence (read-only)</h2>
+        <div id="bypass-handoff-area"></div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Past runs</h2>
+        <p class="lab-help">Every run keeps its run id. Open one to see exactly what it saw; delete ones you don't need (only the latest runs are retained anyway).</p>
+        <div id="runs-list" class="lab-empty">—</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Imported recordings</h2>
+        <p class="lab-help">Recordings you've imported on this page. Deleting one here does not affect any run already stored.</p>
+        <div id="imported-list" class="lab-empty">—</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Evidence and hand-offs</h2>
+        <p class="lab-help">Export downloads every stored run as JSON: policy/recording/protocol fingerprints, per-request decisions, ledger and latency.</p>
+        <div class="lab-row" style="margin-bottom:0">
+          <button class="btn btn-ghost btn-sm" id="btn-export">Export all traffic runs (JSON)</button>
+          <a class="btn btn-ghost btn-sm" id="link-studio" href="#" hidden>Open this policy in Protocol Studio ↗</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="/static/lab_common.js"></script>
+<script src="/static/nav_partial.js"></script>
+<script src="/static/traffic.js"></script>
+</body>
+</html>

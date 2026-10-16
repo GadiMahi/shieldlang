@@ -237,6 +237,10 @@ def build_nfa(root: RNode) -> NFA:
             n.add_eps(pre, bs)
         if br.anchored_end:
             n.add_eps(bf, accept)
+            # Python-style '$': absolute end OR immediately before one final LF.
+            end_lf = n.new_state(None, "final newline before $")
+            n.add_sym(bf, CharSet.of("\n"), end_lf)
+            n.add_eps(end_lf, accept)
         else:
             post = n.new_state(None, "search-suffix Σ*")
             n.add_sym(post, CharSet.any(), post)
@@ -264,9 +268,11 @@ class EpsFreeNFA:
     start: int
     accepting: Set[int]
     edges: Dict[int, List[EFEdge]]
+    complete: bool = True
 
 
 def eps_free(nfa: NFA) -> EpsFreeNFA:
+    complete = True
     kept = {nfa.start}
     for ts in nfa.trans:
         for _, d in ts:
@@ -288,6 +294,8 @@ def eps_free(nfa: NFA) -> EpsFreeNFA:
             for v in nfa.eps[u]:
                 if v not in path:
                     stack.append((v, path + (v,)))
+        if stack:
+            complete = False
         if nfa.accept in counts:
             accepting.add(p)
         out = []
@@ -305,4 +313,4 @@ def eps_free(nfa: NFA) -> EpsFreeNFA:
                 reach.add(e.dst)
                 stack.append(e.dst)
     return EpsFreeNFA(sorted(reach), nfa.start, accepting & reach,
-                      {s: edges.get(s, []) for s in reach})
+                      {s: edges.get(s, []) for s in reach}, complete)

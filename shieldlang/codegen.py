@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List
 
-from .ir.ir import Block, Function, Instr, Module
+from .ir.ir import Block, Function, Instr, Module, Register
 
 
 def _tables(dfa) -> Dict[str, Any]:
@@ -37,8 +37,8 @@ class _Emitter:
 
     # operand rendering shared by the condition inliner
     def operand(self, x, exprs: Dict[str, str]) -> str:
-        if isinstance(x, str) and x in exprs:
-            return exprs[x]
+        if isinstance(x, Register):
+            return exprs.get(x.name, x.name)
         return self.lit(x)
 
     def cond_exprs(self, b: Block) -> (Dict[str, str], str):
@@ -72,8 +72,6 @@ class PythonEmitter(_Emitter):
     lang = "py"
 
     def lit(self, x) -> str:
-        if isinstance(x, str) and x.startswith("t") and x[1:].isdigit():
-            return x
         return repr(x)
 
     def cmp(self, a, op, b):
@@ -157,6 +155,8 @@ class PythonEmitter(_Emitter):
         w("# " + "=" * 74)
         w("import json")
         w("import sys")
+        w("import math")
+        w("import re")
         w("from bisect import bisect_right")
         w()
         w("_MISSING = object()")
@@ -236,14 +236,15 @@ class PythonEmitter(_Emitter):
                 w("# body limits", 1)
                 for i in b.instrs:
                     if i.op == "CHECK_DEPTH":
-                        w(f"if _depth(body) > {i.args[0]}:", 1)
+                        w(f"if _depth(body, {i.args[0]}) > {i.args[0]}:", 1)
                     elif i.op == "CHECK_SIZE":
-                        w(f'if len(json.dumps(body, separators=(",", ":")).encode()) > {i.args[0]}:', 1)
+                        w(f'if len(json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()) > {i.args[0]}:', 1)
                     elif i.op == "CHECK_KEYS":
-                        w(f"if _keys(body) > {i.args[0]}:", 1)
+                        w(f"if _keys(body, {i.args[0]}) > {i.args[0]}:", 1)
                     else:
                         continue
                     w(f"errors.append({i.err!r})", 2)
+                    w("return errors", 2)
                 w()
             elif b.kind == "field":
                 self.field(b)
@@ -280,7 +281,7 @@ class PythonEmitter(_Emitter):
         w()
 
 
-_PY_RUNTIME = '''
+_PY_RUNTIME = r'''
 def _get(body, path):
     v = body
     for part in path.split("."):
@@ -298,7 +299,7 @@ def _is_type(v, ty):
     if ty == "int":
         return isinstance(v, int) and not isinstance(v, bool)
     if ty == "number":
-        return isinstance(v, (int, float)) and not isinstance(v, bool)
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
     if ty == "list":
         return isinstance(v, list)
     return False
@@ -308,10 +309,12 @@ def _coerce(v, ty):
     if not isinstance(v, str):
         return v
     try:
-        if ty == "int" and v.lstrip("-").isdigit():
-            return int(v)
-        if ty == "number":
-            return float(v) if "." in v else int(v)
+        if ty == "int" and re.fullmatch(r"-?[0-9]+", v):
+            n = int(v)
+            return n if abs(n) <= 9007199254740991 else v
+        if ty == "number" and re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?", v):
+            n = float(v)
+            return n if math.isfinite(n) else v
         if ty == "bool" and v in ("true", "false"):
             return v == "true"
     except ValueError:
@@ -342,20 +345,31 @@ def _bin(a, op, b):
         return _MISSING
 
 
-def _depth(v, d=0):
-    if isinstance(v, dict):
-        return max([_depth(x, d + 1) for x in v.values()] or [d + 1])
-    if isinstance(v, list):
-        return max([_depth(x, d + 1) for x in v] or [d + 1])
-    return d
+def _depth(v, limit=None):
+    stack, deepest = [(v, 0)], 0
+    while stack:
+        item, level = stack.pop()
+        children = item.values() if isinstance(item, dict) else item if isinstance(item, list) else None
+        if children is not None:
+            deepest = max(deepest, level + 1)
+            if limit is not None and deepest > limit:
+                return deepest
+            stack.extend((child, level + 1) for child in children)
+    return deepest
 
 
-def _keys(v):
-    if isinstance(v, dict):
-        return len(v) + sum(_keys(x) for x in v.values())
-    if isinstance(v, list):
-        return sum(_keys(x) for x in v)
-    return 0
+def _keys(v, limit=None):
+    stack, count = [v], 0
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            count += len(item)
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            stack.extend(item)
+        if limit is not None and count > limit:
+            return count
+    return count
 
 
 def _strings(vals):
@@ -410,8 +424,6 @@ class JSEmitter(_Emitter):
     lang = "js"
 
     def lit(self, x) -> str:
-        if isinstance(x, str) and x.startswith("t") and x[1:].isdigit():
-            return x
         if isinstance(x, bool):
             return "true" if x else "false"
         return json.dumps(x)
@@ -556,12 +568,12 @@ class JSEmitter(_Emitter):
                 w("// body limits", 1)
                 for i in b.instrs:
                     if i.op == "CHECK_DEPTH":
-                        w(f"if (_depth(body) > {i.args[0]}) errors.push({json.dumps(i.err)});", 1)
+                        w(f"if (_depth(body, {i.args[0]}) > {i.args[0]}) {{ errors.push({json.dumps(i.err)}); return errors; }}", 1)
                     elif i.op == "CHECK_SIZE":
                         w(f"if (new TextEncoder().encode(JSON.stringify(body)).length > {i.args[0]}) "
-                          f"errors.push({json.dumps(i.err)});", 1)
+                          f"{{ errors.push({json.dumps(i.err)}); return errors; }}", 1)
                     elif i.op == "CHECK_KEYS":
-                        w(f"if (_keys(body) > {i.args[0]}) errors.push({json.dumps(i.err)});", 1)
+                        w(f"if (_keys(body, {i.args[0]}) > {i.args[0]}) {{ errors.push({json.dumps(i.err)}); return errors; }}", 1)
                 w()
             elif b.kind == "field":
                 self.field(b)
@@ -602,7 +614,7 @@ _JS_RUNTIME = '''function _own(o, k) { return Object.prototype.hasOwnProperty.ca
 function _get(body, path) {
   let v = body;
   for (const part of path.split(".")) {
-    if (v === null || typeof v !== "object" || Array.isArray(v) || !(part in v)) return MISSING;
+    if (v === null || typeof v !== "object" || Array.isArray(v) || !Object.prototype.hasOwnProperty.call(v, part)) return MISSING;
     v = v[part];
   }
   return v;
@@ -618,8 +630,8 @@ function _isType(v, ty) {
 }
 function _coerce(v, ty) {
   if (typeof v !== "string") return v;
-  if (ty === "int" && /^-?[0-9]+$/.test(v)) return parseInt(v, 10);
-  if (ty === "number" && v.trim() !== "" && !isNaN(Number(v))) return Number(v);
+  if (ty === "int" && /^-?[0-9]+$/.test(v) && !v.endsWith("\\n") && Number.isSafeInteger(Number(v))) return Number(v);
+  if (ty === "number" && /^-?[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/.test(v) && !v.endsWith("\\n") && Number.isFinite(Number(v))) return Number(v);
   if (ty === "bool" && (v === "true" || v === "false")) return v === "true";
   return v;
 }
@@ -635,15 +647,31 @@ function _bin(a, op, b) {
   if (typeof a !== "number" || typeof b !== "number") return MISSING;
   return { "+": a + b, "-": a - b, "*": a * b, "/": a / b }[op];
 }
-function _depth(v, d = 0) {
-  if (Array.isArray(v)) return v.length ? Math.max(...v.map((x) => _depth(x, d + 1))) : d + 1;
-  if (v && typeof v === "object") { const xs = Object.values(v); return xs.length ? Math.max(...xs.map((x) => _depth(x, d + 1))) : d + 1; }
-  return d;
+function _depth(v, limit = Infinity) {
+  const stack = [[v, 0]];
+  let deepest = 0;
+  while (stack.length) {
+    const [item, level] = stack.pop();
+    if (item && typeof item === "object") {
+      deepest = Math.max(deepest, level + 1);
+      if (deepest > limit) return deepest;
+      for (const child of Object.values(item)) stack.push([child, level + 1]);
+    }
+  }
+  return deepest;
 }
-function _keys(v) {
-  if (Array.isArray(v)) return v.reduce((n, x) => n + _keys(x), 0);
-  if (v && typeof v === "object") return Object.keys(v).length + Object.values(v).reduce((n, x) => n + _keys(x), 0);
-  return 0;
+function _keys(v, limit = Infinity) {
+  const stack = [v];
+  let count = 0;
+  while (stack.length) {
+    const item = stack.pop();
+    if (item && typeof item === "object") {
+      if (!Array.isArray(item)) count += Object.keys(item).length;
+      if (count > limit) return count;
+      for (const child of Object.values(item)) stack.push(child);
+    }
+  }
+  return count;
 }
 function _strings(vals) {
   const out = [], stack = [...vals];

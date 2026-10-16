@@ -385,6 +385,8 @@ class _Provenance:
 def automata_analysis(nfa: NFA, root: RNode, dfa: DFA, source: str) -> Tuple[List[Finding], Optional[Witness], Optional[int], List[str], Dict]:
     notes: List[str] = []
     ef = eps_free(nfa)
+    if not ef.complete:
+        return [], None, None, ["Epsilon-path budget exceeded; ambiguity analysis inconclusive."], {}
     prov = _Provenance(nfa, root)
     stats = {"eps_free_states": len(ef.states),
              "eps_free_edges": sum(len(v) for v in ef.edges.values())}
@@ -438,9 +440,9 @@ def automata_analysis(nfa: NFA, root: RNode, dfa: DFA, source: str) -> Tuple[Lis
         where = f"'{source[node.start:node.end]}'" if node else "the implicit search prefix"
         if suffix is None:
             findings.append(Finding(
-                "EDA", "automata", "LOW",
-                f"State q{q[0]} has two distinct loops on '{pump}' ({where}), but every pumped input is accepted, "
-                f"so a backtracking engine stops at the first match. Not exploitable.",
+                "EDA", "automata", "UNKNOWN",
+                f"State q{q[0]} has two distinct loops on '{pump}' ({where}). No rejecting witness was found; "
+                f"accepted inputs may still backtrack before a later alternative succeeds. Safety is unverified.",
                 span, [node.node_id] if node else [], {"state": q[0], "pump": pump}))
             continue
         eda_found = True
@@ -553,8 +555,8 @@ def automata_analysis(nfa: NFA, root: RNode, dfa: DFA, source: str) -> Tuple[Lis
         if _rejecting_suffix(dfa, prefix, pump) is not None:
             exploitable[(p, q)] = path
     if not exploitable:
-        findings.append(Finding("IDA", "automata", "LOW",
-                                "Overlapping loops exist, but every pumped input is accepted, so they are not exploitable.",
+        findings.append(Finding("IDA", "automata", "UNKNOWN",
+                                "Overlapping loops exist; witness search did not establish their backtracking cost.",
                                 [], [], {}))
         return findings, None, None, notes, stats
     pairs = exploitable
@@ -601,8 +603,8 @@ def automata_analysis(nfa: NFA, root: RNode, dfa: DFA, source: str) -> Tuple[Lis
                          "which acts like an implicit Σ* loop.")
         break
     else:
-        findings.append(Finding("IDA", "automata", "LOW",
-                                "Overlapping loops exist, but every pumped input is accepted, so they are not exploitable.",
+        findings.append(Finding("IDA", "automata", "UNKNOWN",
+                                "Overlapping loops exist; witness search did not establish their backtracking cost.",
                                 [], [], {}))
     return findings, witness, degree, notes, stats
 
@@ -612,7 +614,8 @@ def analyze(nfa: NFA, root: RNode, dfa: DFA, source: str) -> ReDoSReport:
     auto, witness, degree, notes, stats = automata_analysis(nfa, root, dfa, source)
     findings = auto + structural
     kinds = {f.kind for f in auto if f.severity in ("HIGH", "MEDIUM")}
-    inconclusive = any("inconclusive" in n for n in notes)
+    inconclusive = any("inconclusive" in n or "partial" in n for n in notes) or any(
+        f.severity == "UNKNOWN" for f in auto)
     if "EDA" in kinds:
         risk, cx = "HIGH", "O(2^n)"
         summary = "Exponential backtracking: a short crafted input can freeze a backtracking regex engine."
@@ -621,10 +624,10 @@ def analyze(nfa: NFA, root: RNode, dfa: DFA, source: str) -> ReDoSReport:
         summary = f"Polynomial backtracking (degree {degree}): long crafted inputs cause super-linear slow-down."
     elif inconclusive:
         risk, cx = "UNKNOWN", "?"
-        summary = "Analysis budget exceeded; result inconclusive."
+        summary = "Backtracking safety is unverified: analysis is incomplete or no exploit witness was found."
     else:
         risk, cx = "LOW", "O(n)"
-        summary = "No exploitable ambiguity: matching time is linear in the input length."
+        summary = "No exploitable ambiguity detected within the supported analysis. Generated DFA checks do not backtrack."
         if any(f.severity in ("HIGH", "MEDIUM") for f in structural):
-            notes.append("Structural indicators were found, but automata analysis proved they are not exploitable.")
+            notes.append("Structural indicators were found; no exploitable ambiguity was detected by this analysis.")
     return ReDoSReport(risk, cx, summary, findings, witness, degree, notes, stats)

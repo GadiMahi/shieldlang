@@ -96,7 +96,7 @@ class Parser:
 
     def sync(self, top_level: bool = False):
         while not self.at("EOF"):
-            if top_level and self.at("KW_RULE", "KW_CONST", "KW_PATTERN"):
+            if top_level and (self.at("KW_RULE", "KW_CONST", "KW_PATTERN") or (self.at("IDENT") and self.cur.text == "protocol")):
                 return
             if not top_level and self.at("RBRACE"):
                 return
@@ -117,9 +117,12 @@ class Parser:
                     items.append(self.const())
                 elif self.at("KW_PATTERN"):
                     items.append(self.pattern())
+                elif self.at("IDENT") and self.cur.text == "protocol":
+                    from ..protocol.parser import parse_protocol
+                    items.append(parse_protocol(self))
                 else:
                     tok = self.cur
-                    self.d.error("P002", f"Expected 'rule', 'const' or 'pattern' at top level, found '{tok.text}'",
+                    self.d.error("P002", f"Expected 'rule', 'const', 'pattern' or 'protocol' at top level, found '{tok.text}'",
                                  tok.start, tok.end, "parser")
                     raise ParseError()
             except ParseError:

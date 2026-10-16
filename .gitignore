@@ -4,3 +4,10 @@ __pycache__/
 *_validator.py
 *_validator.js
 .venv/
+
+.sync/
+
+# Local lab state and browser test artifacts
+.shieldlang_data/
+playwright-report/
+test-results/

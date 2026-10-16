@@ -63,7 +63,7 @@ class       = "[" [ "^" ] item { item } "]" ;      item = char [ "-" char ] | es
 escape      = "\d" | "\D" | "\w" | "\W" | "\s" | "\S" | "\n" | "\t" | "\r" | "\xHH" | "\uHHHH" | "\" meta ;
 ```
 
-Anchors may only appear at the start or end of the pattern, or of a top-level alternative. Back-references, look-around and `\b` are rejected with a diagnostic, because they are not regular. Matching uses search semantics (like `re.search` or `RegExp.test`). A missing `^` or `$` is modelled as an implicit `Σ*`.
+Anchors may only appear at the start or end of the pattern, or of a top-level alternative. Back-references, look-around and `\b` are outside the supported subset and are rejected with a diagnostic. Matching uses search semantics. A missing `^` or `$` is modelled as an implicit `Σ*`. `$` accepts absolute end or the position before one final LF, following Python's default behavior. ASCII `\d`, `\w`, `\s` and ASCII case folding are used. This subset does not promise compatibility with every Python or JavaScript regex dialect detail.
 
 ## Semantics, briefly
 
@@ -72,3 +72,7 @@ Anchors may only appear at the start or end of the pattern, or of a top-level al
 * The checks for one field stop at that field's first violation. The other fields are still checked, so all violations are reported.
 * `when C require x` reports an error if `C` holds and `x` is missing. `forbid` reports an error if `x` is present.
 * `block if S matches P` rejects the request if any string in scope `S` matches `P`.
+* Failed body limits stop validation before field checks and scans. Depth and key traversal are iterative and stop once the configured bound is exceeded.
+* Header/query/path `number` coercion accepts `-?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?`. Whitespace, hex, binary, `+` prefixes and non-finite values are rejected. Integer coercion accepts decimal digits with an optional minus, within JavaScript's safe integer range.
+* `max_size` measures compact UTF-8 JSON serialization of the parsed body, not the original HTTP bytes. Numeric formatting and extreme numeric values remain backend interoperability limits; integrations should enforce actual raw-body byte limits before parsing.
+* Field verification covers scalar strings/enums, presence, length constraints and DFA pattern checks. It does not verify error identity/order, conditions, scans, numeric/list fields, complete requests, or generated backend code.

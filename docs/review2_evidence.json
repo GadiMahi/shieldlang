@@ -1,0 +1,432 @@
+{
+  "evaluation": "Review 2 synthetic pilot; timings from a single run",
+  "python": "3.12.14",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "cases": [
+    {
+      "case": "intersection",
+      "compile_ok": true,
+      "compile_ms": 36.223,
+      "checker_ms": 2.986,
+      "instructions_before": 6,
+      "instructions_after": 5,
+      "verification": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "equivalent",
+            "complete": true,
+            "states": 104,
+            "examples": [],
+            "alphabet_classes": 4,
+            "length_saturation": 21
+          }
+        ],
+        "counts": {
+          "equivalent": 1,
+          "different": 0,
+          "inconclusive": 0,
+          "unsupported": 0
+        },
+        "status": "verified"
+      }
+    },
+    {
+      "case": "length_subsumption",
+      "compile_ok": true,
+      "compile_ms": 14.721,
+      "checker_ms": 0.408,
+      "instructions_before": 5,
+      "instructions_after": 4,
+      "verification": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "equivalent",
+            "complete": true,
+            "states": 12,
+            "examples": [],
+            "alphabet_classes": 3,
+            "length_saturation": 6
+          }
+        ],
+        "counts": {
+          "equivalent": 1,
+          "different": 0,
+          "inconclusive": 0,
+          "unsupported": 0
+        },
+        "status": "verified"
+      }
+    },
+    {
+      "case": "enum",
+      "compile_ok": true,
+      "compile_ms": 1.799,
+      "checker_ms": 1.031,
+      "instructions_before": 4,
+      "instructions_after": 4,
+      "verification": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "equivalent",
+            "complete": true,
+            "states": 10,
+            "examples": [],
+            "alphabet_classes": 9,
+            "length_saturation": 1
+          }
+        ],
+        "counts": {
+          "equivalent": 1,
+          "different": 0,
+          "inconclusive": 0,
+          "unsupported": 0
+        },
+        "status": "verified"
+      }
+    },
+    {
+      "case": "mixed_coverage",
+      "compile_ok": true,
+      "compile_ms": 1.348,
+      "checker_ms": 0.191,
+      "instructions_before": 8,
+      "instructions_after": 8,
+      "verification": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "n",
+            "status": "unsupported",
+            "reason": "Only scalar string and string-enum fields are supported"
+          },
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "equivalent",
+            "complete": true,
+            "states": 22,
+            "examples": [],
+            "alphabet_classes": 1,
+            "length_saturation": 21
+          }
+        ],
+        "counts": {
+          "equivalent": 1,
+          "different": 0,
+          "inconclusive": 0,
+          "unsupported": 1
+        },
+        "status": "partial"
+      }
+    }
+  ],
+  "mutations": [
+    {
+      "case": "lost_regex",
+      "detected": true,
+      "report": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "different",
+            "complete": false,
+            "states": 1,
+            "examples": [
+              {
+                "value": "",
+                "missing": false,
+                "accepted_before": false,
+                "accepted_after": true
+              }
+            ],
+            "alphabet_classes": 3,
+            "length_saturation": 1
+          }
+        ],
+        "counts": {
+          "equivalent": 0,
+          "different": 1,
+          "inconclusive": 0,
+          "unsupported": 0
+        },
+        "status": "failed"
+      }
+    },
+    {
+      "case": "lost_length_bound",
+      "detected": true,
+      "report": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "different",
+            "complete": false,
+            "states": 4,
+            "examples": [
+              {
+                "value": "aaa",
+                "missing": false,
+                "accepted_before": false,
+                "accepted_after": true
+              }
+            ],
+            "alphabet_classes": 1,
+            "length_saturation": 3
+          }
+        ],
+        "counts": {
+          "equivalent": 0,
+          "different": 1,
+          "inconclusive": 0,
+          "unsupported": 0
+        },
+        "status": "failed"
+      }
+    },
+    {
+      "case": "changed_presence",
+      "detected": true,
+      "report": {
+        "scope": "Scalar string-field acceptance before and after optimization",
+        "exclusions": [
+          "Whole-program behavior",
+          "Conditional rules and scans",
+          "Error codes and ordering",
+          "Generated backend correctness",
+          "Numeric and list fields"
+        ],
+        "checks": [
+          {
+            "method": "POST",
+            "path": "/",
+            "source": "field",
+            "field": "x",
+            "status": "different",
+            "complete": false,
+            "states": 0,
+            "examples": [
+              {
+                "value": null,
+                "missing": true,
+                "accepted_before": true,
+                "accepted_after": false
+              }
+            ]
+          }
+        ],
+        "counts": {
+          "equivalent": 0,
+          "different": 1,
+          "inconclusive": 0,
+          "unsupported": 0
+        },
+        "status": "failed"
+      }
+    }
+  ],
+  "policy_comparison": {
+    "status": "behavior_change_found",
+    "scope": "Shared scalar string fields; field witnesses are not whole-request witnesses",
+    "whole_program_equivalence": "not_checked",
+    "checks": [
+      {
+        "method": "POST",
+        "path": "/api/accounts",
+        "source": "field",
+        "field": "tier",
+        "status": "different",
+        "complete": false,
+        "states": 14,
+        "examples": [
+          {
+            "value": "pro",
+            "missing": false,
+            "accepted_before": true,
+            "accepted_after": false
+          },
+          {
+            "value": "team",
+            "missing": false,
+            "accepted_before": false,
+            "accepted_after": true
+          }
+        ],
+        "alphabet_classes": 12,
+        "length_saturation": 1
+      },
+      {
+        "method": "POST",
+        "path": "/api/accounts",
+        "source": "field",
+        "field": "username",
+        "status": "different",
+        "complete": true,
+        "states": 39,
+        "examples": [
+          {
+            "value": "aaaaaaaaa",
+            "missing": false,
+            "accepted_before": false,
+            "accepted_after": true
+          }
+        ],
+        "alphabet_classes": 3,
+        "length_saturation": 13
+      }
+    ],
+    "witnesses": [
+      {
+        "request": {
+          "method": "POST",
+          "path": "/api/accounts",
+          "body": {
+            "username": "aaa",
+            "tier": "pro"
+          },
+          "query": {},
+          "headers": {}
+        },
+        "allowed_before": true,
+        "allowed_after": false,
+        "field": "tier",
+        "errors_before": [],
+        "errors_after": [
+          {
+            "code": "E9",
+            "kind": "enum",
+            "target": "tier",
+            "message": "field 'tier' must be one of: basic, team"
+          }
+        ],
+        "replayed": true
+      },
+      {
+        "request": {
+          "method": "POST",
+          "path": "/api/accounts",
+          "body": {
+            "username": "aaa",
+            "tier": "team"
+          },
+          "query": {},
+          "headers": {}
+        },
+        "allowed_before": false,
+        "allowed_after": true,
+        "field": "tier",
+        "errors_before": [
+          {
+            "code": "E9",
+            "kind": "enum",
+            "target": "tier",
+            "message": "field 'tier' must be one of: basic, pro"
+          }
+        ],
+        "errors_after": [],
+        "replayed": true
+      },
+      {
+        "request": {
+          "method": "POST",
+          "path": "/api/accounts",
+          "body": {
+            "username": "aaaaaaaaa",
+            "tier": "basic"
+          },
+          "query": {},
+          "headers": {}
+        },
+        "allowed_before": false,
+        "allowed_after": true,
+        "field": "username",
+        "errors_before": [
+          {
+            "code": "E6",
+            "kind": "length",
+            "target": "username",
+            "message": "field 'username' must be at least 3 and at most 8 characters"
+          }
+        ],
+        "errors_after": [],
+        "replayed": true
+      }
+    ],
+    "note": "Routes, guards, body limits, scans, numeric fields and error behavior require separate analysis."
+  },
+  "limitations": [
+    "Four synthetic examples and three hand-selected mutations",
+    "No state-of-the-art comparison or statistical performance claim",
+    "DFA front end is shared with the compiler",
+    "Whole-program equivalence is not established"
+  ]
+}

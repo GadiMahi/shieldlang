@@ -1,0 +1,117 @@
+{
+ "name": "checkout_attacks",
+ "description": "Legitimate checkout plus skipped payment, cross-principal, post-failure confirm, binding mismatch and terminal replay.",
+ "entries": [
+  {
+   "id": "create_a1",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders",
+   "body": {
+    "client_ref": "a1",
+    "item": "book"
+   },
+   "save_as": "o1",
+   "label": {
+    "legitimate": true
+   }
+  },
+  {
+   "id": "skip_payment",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/confirm",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "label": {
+    "legitimate": false
+   }
+  },
+  {
+   "id": "cross_principal_pay",
+   "identity": "bob",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/pay",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "label": {
+    "legitimate": false
+   }
+  },
+  {
+   "id": "pay_declined",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/pay",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "fault": "decline",
+   "label": {
+    "legitimate": true
+   }
+  },
+  {
+   "id": "confirm_after_decline",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/confirm",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "label": {
+    "legitimate": false
+   }
+  },
+  {
+   "id": "pay_ok",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/pay",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "label": {
+    "legitimate": true
+   }
+  },
+  {
+   "id": "confirm_other_token",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/confirm",
+   "body": {
+    "card_token": "tok_b"
+   },
+   "label": {
+    "legitimate": false
+   }
+  },
+  {
+   "id": "confirm_ok",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/confirm",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "label": {
+    "legitimate": true
+   }
+  },
+  {
+   "id": "confirm_replay",
+   "identity": "alice",
+   "method": "POST",
+   "path": "/api/orders/{{o1}}/confirm",
+   "body": {
+    "card_token": "tok_a"
+   },
+   "label": {
+    "legitimate": false
+   }
+  }
+ ]
+}

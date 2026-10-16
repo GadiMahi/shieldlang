@@ -13,9 +13,11 @@ Request format:
 from __future__ import annotations
 
 import json
+import math
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from .ir.ir import Function, Instr, Module
+from .ir.ir import Function, Instr, Module, Register
 from .lang import ast as A
 from .lang.lexer import UNITS
 
@@ -46,20 +48,31 @@ def route(mod: Module, method: str, path: str) -> Tuple[Optional[Function], Dict
     return None, {}
 
 
-def _depth(v, d=0) -> int:
-    if isinstance(v, dict):
-        return max([_depth(x, d + 1) for x in v.values()] or [d + 1])
-    if isinstance(v, list):
-        return max([_depth(x, d + 1) for x in v] or [d + 1])
-    return d
+def _depth(v, limit=None) -> int:
+    stack, deepest = [(v, 0)], 0
+    while stack:
+        item, level = stack.pop()
+        children = item.values() if isinstance(item, dict) else item if isinstance(item, list) else None
+        if children is not None:
+            deepest = max(deepest, level + 1)
+            if limit is not None and deepest > limit:
+                return deepest
+            stack.extend((child, level + 1) for child in children)
+    return deepest
 
 
-def _keys(v) -> int:
-    if isinstance(v, dict):
-        return len(v) + sum(_keys(x) for x in v.values())
-    if isinstance(v, list):
-        return sum(_keys(x) for x in v)
-    return 0
+def _keys(v, limit=None) -> int:
+    stack, count = [v], 0
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            count += len(item)
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            stack.extend(item)
+        if limit is not None and count > limit:
+            return count
+    return count
 
 
 def _strings(v, out: List[str]):
@@ -81,7 +94,7 @@ def _type_ok(v, ty: str, params: bool) -> bool:
     if ty == "int":
         return isinstance(v, int) and not isinstance(v, bool)
     if ty == "number":
-        return isinstance(v, (int, float)) and not isinstance(v, bool)
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
     if ty == "list":
         return isinstance(v, list)
     return False
@@ -92,10 +105,12 @@ def _coerce(v, ty: str):
     if not isinstance(v, str):
         return v
     try:
-        if ty == "int" and v.lstrip("-").isdigit():
-            return int(v)
-        if ty == "number":
-            return float(v) if "." in v else int(v)
+        if ty == "int" and re.fullmatch(r"-?[0-9]+", v):
+            n = int(v)
+            return n if abs(n) <= 9007199254740991 else v
+        if ty == "number" and re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?", v):
+            n = float(v)
+            return n if math.isfinite(n) else v
         if ty == "bool" and v in ("true", "false"):
             return v == "true"
     except ValueError:
@@ -114,8 +129,8 @@ class VM:
         if isinstance(x, A.Node):
             from .ir.optimize import _fold
             return _fold(x, self.consts)
-        if isinstance(x, str) and x in regs:
-            return regs[x]
+        if isinstance(x, Register):
+            return regs.get(x.name, MISSING)
         return x
 
     def run(self, request: Dict[str, Any], trace: bool = True) -> Dict[str, Any]:
@@ -238,14 +253,15 @@ class VM:
             elif op in ("CHECK_DEPTH", "CHECK_SIZE", "CHECK_KEYS"):
                 lim = self.val(ins.args[0], regs)
                 if op == "CHECK_DEPTH":
-                    m = _depth(body)
+                    m = _depth(body, lim)
                 elif op == "CHECK_SIZE":
-                    m = len(json.dumps(body, separators=(",", ":")).encode())
+                    m = len(json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode())
                 else:
-                    m = _keys(body)
+                    m = _keys(body, lim)
                 ok = m <= lim
                 if not ok:
                     fail(ins)
+                    break  # structural limits stop validation before deeper work
                 note = f"{m} ≤ {lim}" if ok else f"FAIL ({m} > {lim})"
             elif op == "EXISTS":
                 regs[ins.dst] = regs.get(ins.args[0], MISSING) is not MISSING
@@ -257,7 +273,8 @@ class VM:
             elif op == "BIN":
                 a, o, b = self.val(ins.args[0], regs), ins.args[1], self.val(ins.args[2], regs)
                 try:
-                    regs[ins.dst] = {"+": a + b, "-": a - b, "*": a * b}.get(o) if o != "/" else a / b
+                    regs[ins.dst] = {"+": lambda: a + b, "-": lambda: a - b,
+                                     "*": lambda: a * b, "/": lambda: a / b}[o]()
                 except Exception:
                     regs[ins.dst] = MISSING
             elif op in ("AND", "OR"):

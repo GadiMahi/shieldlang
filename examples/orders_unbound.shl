@@ -1,0 +1,43 @@
+// Same order API as orders.shl, but the protocol below does NOT bind PayOrder's card token to
+// ConfirmOrder's card token. Compare this to Checkout in orders.shl: nothing else differs — same
+// rules, same routes, same demo backend — only the missing `bind` line. The scenario buttons on
+// this page show what that one missing line costs: confirming with a different card than the one
+// that paid is now ALLOWED by the protocol layer, and the backend (which never checks this itself)
+// applies it.
+rule CreateOrder on POST "/api/orders" {
+  field client_ref : string matches /^[a-z0-9-]{1,32}$/;
+  field item       : string maxlen 64;
+  body max_depth 3 max_size 2 KB;
+}
+rule PayOrder on POST "/api/orders/{id}/pay" {
+  param id         : string matches /^ord_[0-9]+$/;
+  field card_token : string matches /^tok_[a-z0-9]{1,16}$/;
+  body max_depth 3 max_size 2 KB;
+}
+rule ConfirmOrder on POST "/api/orders/{id}/confirm" {
+  param id         : string matches /^ord_[0-9]+$/;
+  field card_token : string matches /^tok_[a-z0-9]{1,16}$/;
+  body max_depth 3 max_size 2 KB;
+}
+rule GetOrder on GET "/api/orders/{id}" {
+  param id : string matches /^ord_[0-9]+$/;
+}
+
+// CheckoutUnbound: identical lifecycle to Checkout, minus the card-token binding.
+protocol CheckoutUnbound {
+  resource "order";
+  states created, paid, confirmed;
+  initial created;
+  terminal confirmed;
+  key id;
+  create CreateOrder id "id" ref client_ref probe get "/api/orders/by-ref/{ref}";
+  step PayOrder     from created to paid;
+  step ConfirmOrder from paid    to confirmed;
+  outcome success 200..201;
+  outcome failure 402;
+  contract "Demo backend returns 402 only when the card was declined and no state changed. Unlike Checkout, nothing here ties ConfirmOrder's card_token to the one PayOrder used.";
+  quiesce 2;
+  reconcile get "/api/orders/{key}" state "state" owner "owner" {
+    "created": created, "paid": paid, "confirmed": confirmed
+  };
+}

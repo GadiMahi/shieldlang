@@ -31,6 +31,12 @@ COST = {"LOAD": 1, "JMP_IF_MISSING": 1, "REQUIRE": 1, "CHECK_TYPE": 1, "CHECK_EN
         "CHECK_DEPTH": 8, "CHECK_SIZE": 8, "CHECK_KEYS": 8, "JMP": 1, "LABEL": 0, "CONST": 0}
 
 
+@dataclass(frozen=True)
+class Register:
+    """A value operand, distinct from a string literal such as 't1'."""
+    name: str
+
+
 @dataclass
 class Instr:
     op: str
@@ -61,6 +67,8 @@ class Instr:
 
 
 def _fmt(x) -> str:
+    if isinstance(x, Register):
+        return x.name
     if isinstance(x, A.Node):
         return expr_text(x)
     if isinstance(x, str) and (x.startswith("t") and x[1:].isdigit() or x.startswith("dfa") or x.startswith("L")):
@@ -347,19 +355,19 @@ class Lowerer:
             return e.value
         if isinstance(e, A.Ref):
             if e.name in temps:
-                return temps[e.name]
+                return Register(temps[e.name])
             if e.name in self.m.consts:
                 return self.m.consts[e.name]
             return None
         if isinstance(e, A.Exists):
             t = self.temp()
             ins.append(Instr("EXISTS", [temps.get(e.name, "?")], dst=t))
-            return t
+            return Register(t)
         if isinstance(e, A.Unary):
             v = self.cond(e.operand, temps, ins)
             t = self.temp()
             ins.append(Instr("NOT" if e.op == "!" else "BIN", [v] if e.op == "!" else [0, "-", v], dst=t))
-            return t
+            return Register(t)
         if isinstance(e, A.Binary):
             a = self.cond(e.left, temps, ins)
             b = self.cond(e.right, temps, ins)
@@ -370,7 +378,7 @@ class Lowerer:
                 ins.append(Instr("BIN", [a, e.op, b], dst=t))
             else:
                 ins.append(Instr("CMP", [a, e.op, b], dst=t))
-            return t
+            return Register(t)
         return None
 
     def when_block(self, r: RuleInfo, w, temps: Dict[str, str]) -> Block:

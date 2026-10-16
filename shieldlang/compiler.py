@@ -20,6 +20,7 @@ from .lang.lexer import Lexer, Token
 from .lang.parser import Parser
 from .lang.sema import SemanticModel, analyze
 from .vm import VM
+from .verification import verify_optimizations
 
 PHASES = ["lexer", "parser", "semantic", "regex", "ir", "optimizer", "codegen"]
 
@@ -38,6 +39,8 @@ class CompileResult:
     js: str
     diags: DiagnosticBag
     timings: Dict[str, float] = field(default_factory=dict)
+    verification: Dict[str, Any] = field(default_factory=dict)
+    protocols: List[Any] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -92,7 +95,16 @@ class CompileResult:
             d["passes"] = [p.to_json() for p in self.passes]
         d["python"] = self.python
         d["js"] = self.js
+        d["verification"] = self.verification
+        d["protocols"] = [p.to_json() for p in self.protocols]
         return d
+
+
+def _protocol_phase(program, model, diags, ir):
+    if not any(type(i).__name__ == "Protocol" for i in program.items):
+        return []
+    from .protocol.analysis import analyze_protocols
+    return analyze_protocols(program, model, diags, ir)
 
 
 def compile_source(source: str, name: str = "rules.shl") -> CompileResult:
@@ -113,6 +125,8 @@ def compile_source(source: str, name: str = "rules.shl") -> CompileResult:
     ir = opt = None
     passes: List[PassReport] = []
     py = js = ""
+    verification = {}
+    protocols: List[Any] = []
     if not diags.has_errors():
         t0 = time.perf_counter()
         ir = lower(model, source)
@@ -121,7 +135,19 @@ def compile_source(source: str, name: str = "rules.shl") -> CompileResult:
         opt, passes = run_passes(ir, model.consts)
         t["optimizer"] = time.perf_counter() - t0
         t0 = time.perf_counter()
-        py = generate_python(opt, name)
-        js = generate_js(opt, name)
+        verification = verify_optimizations(ir, opt, model.consts)
+        t["verification"] = time.perf_counter() - t0
+        if verification["status"] == "failed":
+            diags.error("V001", "Optimizer changed supported string-field acceptance; code generation stopped",
+                        0, 0, "verification")
+        t0 = time.perf_counter()
+        protocols = _protocol_phase(program, model, diags, ir)
+        t["protocol"] = time.perf_counter() - t0
+        t0 = time.perf_counter()
+        if not diags.has_errors():
+            py = generate_python(opt, name)
+            js = generate_js(opt, name)
         t["codegen"] = time.perf_counter() - t0
-    return CompileResult(source, name, tokens, program, model, ir, opt, passes, py, js, diags, t)
+    else:
+        protocols = _protocol_phase(program, model, diags, None)
+    return CompileResult(source, name, tokens, program, model, ir, opt, passes, py, js, diags, t, verification, protocols)

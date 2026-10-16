@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShieldLang · Protocol Studio</title>
+<meta name="description" content="Compile a stateful protocol, run real requests against it, and watch reservations, Unknown outcomes and reconciliation evidence.">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/lab_common.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%23121212'/%3E%3C/svg%3E">
+</head>
+<body class="lab" data-page="/protocols">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="lab-topbar">
+  <div class="lab-brand">Protocol Studio <span class="tag">rules about the ORDER of requests</span></div>
+  <span id="shared-nav"></span>
+</header>
+<main class="lab-main" id="main">
+
+  <section class="lab-hero" aria-labelledby="hero-h">
+    <h1 id="hero-h">Protocol Studio</h1>
+    <p class="lead">A normal ShieldLang rule judges <b>one request at a time</b> ("is this field well-formed?"). A <b>protocol</b> judges the
+      <b>order</b> of requests: an order may only be <i>paid</i> after it is <i>created</i>, only be <i>confirmed</i> after it is <i>paid</i>, and the
+      card used to confirm must be the same card used to pay. This page lets you write such a protocol, check it, and then fire real requests at it
+      to watch what the runtime does — including when the network lies about whether a payment went through.</p>
+    <ol class="lab-flow" id="flow">
+      <li data-step="compile">Write &amp; check the protocol</li>
+      <li data-step="session">Start a session</li>
+      <li data-step="request">Send requests</li>
+      <li data-step="recover">Break things, then recover</li>
+      <li data-step="evidence">Save the evidence</li>
+    </ol>
+    <p class="fine">Nothing on this page is simulated in the browser. Your source is compiled by the real ShieldLang compiler, requests pass through a real local
+      gateway (loopback only) to a small demo backend, and every table on the right is read back from the server after each action.</p>
+    <details class="lab-gloss">
+      <summary>Plain-English glossary (click to open)</summary>
+      <dl>
+        <dt>Protocol</dt><dd>A small state machine for one kind of thing (here an <i>order</i>): its states, and which request rule is allowed to move it from one state to the next.</dd>
+        <dt>Resource</dt><dd>One live instance of that thing — e.g. order <code>ord_1</code>, currently in state <code>paid</code>, owned by <code>alice</code>.</dd>
+        <dt>Reservation</dt><dd>Before a request is forwarded, the runtime <b>reserves</b> the resource atomically so two requests can't move it at once. The reservation is written to disk <i>before</i> the backend is called, so a crash can't make it disappear.</dd>
+        <dt>Committed / Released</dt><dd><b>Committed</b>: the backend definitely applied the change, so the resource moves to its new state. <b>Released</b>: the backend definitely did <i>not</i> apply it, so the resource stays where it was.</dd>
+        <dt>Unknown</dt><dd>We sent the request but can't tell whether it took effect (timeout, dropped response, unexpected status). The resource is <b>frozen</b> — further requests on it are refused — until evidence settles it. It is never guessed.</dd>
+        <dt>Reconcile</dt><dd>Settling an Unknown with <b>evidence</b>: the runtime asks the backend what the resource looks like now (a "probe"), or an operator supplies written evidence. There is deliberately no "mark as success" button.</dd>
+        <dt>Enforce vs Observe-only</dt><dd><b>Enforce</b>: the gateway blocks requests the protocol forbids. <b>Observe-only</b>: everything is forwarded; the gateway just records what it <i>would</i> have blocked. Observe results are predictions, never outcomes.</dd>
+        <dt>Backend ledger</dt><dd>The demo backend's own record of what it actually did. It is independent of the protocol runtime, so it is the ground truth against which the runtime's beliefs can be compared.</dd>
+        <dt>Hash</dt><dd>A fingerprint of the exact protocol (<code>sha256:…</code>). If you edit the source, the hash changes, and evidence from an older session is flagged as stale.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <div id="banner-area"></div>
+  <div class="lab-status" id="status-strip" aria-live="polite"></div>
+
+  <div class="lab-grid">
+    <!-- LEFT: the workflow, top to bottom -->
+    <div class="lab-col">
+      <p class="lab-col-title">Do this</p>
+
+      <section class="lab-card" id="source-card">
+        <h2><span class="step-no">1</span> Write and check the protocol</h2>
+        <p class="lab-help"><b>What this is.</b> ShieldLang source: <code>rule</code> blocks describe what a single request must look like; the <code>protocol</code> block describes the
+          allowed order. Pick an example or edit the text, then press <b>Check protocol</b>. Checks run on the compiler, not on live traffic.</p>
+        <div class="lab-row">
+          <label class="lab-field" style="flex:1 1 220px">Example
+            <select id="example-select"></select>
+          </label>
+          <label class="lab-field" style="flex:1 1 140px">Protocol
+            <select id="protocol-select"></select>
+          </label>
+          <label class="lab-field" style="flex:1 1 150px">Mode
+            <select id="mode-select"><option value="enforce">Enforce (block violations)</option><option value="observe">Observe-only (forward all)</option></select>
+          </label>
+          <button class="btn btn-primary" id="btn-compile">Check protocol</button>
+        </div>
+        <textarea id="proto-source" class="lab-editor" spellcheck="false" aria-label="ShieldLang protocol source"></textarea>
+        <div id="diag-area" style="margin-top:10px"></div>
+      </section>
+
+      <section class="lab-card" id="graph-card">
+        <h2><span class="step-no">2</span> What the protocol allows</h2>
+        <p class="lab-help"><b>How to read it.</b> Each pill is a state. A request rule may move a resource along an arrow, and no other way. Anything that isn't an arrow
+          (e.g. confirming an order that was never paid) will be refused by the runtime.
+          <br><b>Honest scope:</b> this graph only shows that states are connected. It is <i>not</i> a proof that every order can always finish.</p>
+        <div id="graph-area" class="lab-empty">Press “Check protocol” to see the states and the moves between them.</div>
+      </section>
+
+      <section class="lab-card" id="session-card">
+        <h2><span class="step-no">3</span> Start a session</h2>
+        <p class="lab-help"><b>What a session is.</b> A private run of this protocol: its own database file, its own demo backend, its own gateway (all on 127.0.0.1).
+          Starting one gives you somewhere safe to send requests and break things. Closing it throws it away.</p>
+        <div id="session-area">
+          <p class="lab-empty">No active session yet. Check the protocol first (step 1), then start one.</p>
+          <button class="btn btn-primary js-start" disabled>Start session</button>
+        </div>
+      </section>
+
+      <section class="lab-card locked" id="request-card">
+        <h2><span class="step-no">4</span> Send requests</h2>
+        <p class="lock-note">Locked until a session is running (step 3).</p>
+        <fieldset class="lab-fs" id="request-fs" disabled>
+          <p class="lab-help"><b>Try a scenario</b> — each button fills in the form below and tells you what to expect. Run them in order the first time.
+            “Use the last order” means the order id returned by your most recent create.</p>
+          <div class="lab-chips" id="scenario-chips"></div>
+          <div class="lab-row">
+            <label class="lab-field">Who is calling
+              <select id="req-identity"><option value="alice">alice</option><option value="bob">bob</option><option value="carol">carol</option><option value="">(nobody — unauthenticated)</option></select>
+              <span class="hint">Orders belong to whoever created them.</span>
+            </label>
+            <label class="lab-field" style="flex:0 1 110px">Method
+              <select id="req-method"><option>POST</option><option>GET</option></select>
+            </label>
+            <label class="lab-field" style="flex:2 1 220px">Path
+              <input id="req-path" value="/api/orders" />
+            </label>
+          </div>
+          <div class="lab-row">
+            <label class="lab-field" style="flex:1 1 220px">Body (JSON)
+              <textarea id="req-body">{"client_ref": "r1", "item": "book"}</textarea>
+            </label>
+            <label class="lab-field" style="flex:1 1 200px">Make the network misbehave
+              <select id="req-fault">
+                <option value="">no fault</option>
+                <option value="decline">card declined (pay) — backend says 402, nothing changed</option>
+                <option value="drop_after_commit">backend applies it, but the response is lost</option>
+                <option value="error500_after_commit">backend applies it, then answers 500</option>
+                <option value="error500_no_effect">backend answers 500 without applying it</option>
+                <option value="delay_commit:800">backend is slow (800 ms)</option>
+              </select>
+              <span class="hint">Faults are injected at the demo backend, so the runtime really does face the ambiguity.</span>
+            </label>
+          </div>
+          <div class="lab-row"><button class="btn btn-primary" id="btn-send">Send request</button></div>
+          <div id="scenario-expect"></div>
+          <div id="request-result"></div>
+        </fieldset>
+      </section>
+
+      <section class="lab-card locked" id="recovery-card">
+        <h2><span class="step-no">5</span> Recover and reconcile</h2>
+        <p class="lock-note">Locked until a session is running (step 3).</p>
+        <fieldset class="lab-fs" id="recovery-fs" disabled>
+          <p class="lab-help"><b>When a request ended as <span class="badge badge-unknown">unknown</span>:</b> the order is frozen. Type its id (filled in for you after a create) and press
+            <b>Reconcile by probe</b> — the runtime asks the backend what the order looks like now, but only trusts the answer after a short quiet period
+            (so a slow request that is still in flight can't fool it). If the probe is inconclusive you can resolve it by hand <i>with written evidence</i>.
+            <br><b>Restart session</b> simulates a process restart: the runtime reopens the same database and runs its recovery pass (a reservation with no send record is released;
+            one that was sent but has no recorded outcome becomes Unknown — never silently released).</p>
+          <div class="lab-row">
+            <label class="lab-field" style="flex:1 1 160px">Order id
+              <input id="rec-key" placeholder="ord_1">
+            </label>
+            <button class="btn btn-ghost" id="btn-reconcile">Reconcile by probe</button>
+            <button class="btn btn-wine" id="btn-restart">Restart session (run recovery)</button>
+          </div>
+          <div id="reconcile-result"></div>
+          <div id="operator-area"></div>
+        </fieldset>
+      </section>
+    </div>
+
+    <!-- RIGHT: live evidence, always visible -->
+    <div class="lab-col">
+      <p class="lab-col-title">Watch this (read back from the server after every action)</p>
+
+      <section class="lab-card">
+        <h2>Resources — where each order is now</h2>
+        <p class="lab-help"><b>Status:</b> <span class="badge badge-allow">settled</span> nothing in flight ·
+          <span class="badge badge-observe">reserved</span> a request is holding it right now ·
+          <span class="badge badge-unknown">unknown</span> frozen until reconciled. <b>Version</b> counts committed changes.</p>
+        <div id="resources-area" class="lab-empty">No session yet.</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Reservations — every attempt and how it ended</h2>
+        <p class="lab-help">One row per request that the runtime admitted. “Evidence” is the reason the runtime gave for committing, releasing or leaving it unknown.</p>
+        <div id="reservations-area" class="lab-empty">No session yet.</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Timeline — newest first</h2>
+        <p class="lab-help">The runtime's own audit log of admissions, denials, outcomes and recoveries.</p>
+        <div id="timeline-area" class="lab-empty">No session yet.</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Backend ledger — what really happened</h2>
+        <p class="lab-help"><b>Independent evidence.</b> Read straight from the demo backend, never from the gateway's decisions. If the runtime and the ledger ever disagree, the
+          ledger is right — a “violation” banner appears below it.</p>
+        <div id="ledger-area" class="lab-empty">No session yet.</div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Evidence and hand-offs</h2>
+        <p class="lab-help">Save a snapshot of this session (stable run id, exportable from Traffic Lab), or replay this exact policy against a recorded request sequence.</p>
+        <div class="lab-row" style="margin-bottom:0">
+          <button class="btn btn-ghost btn-sm" id="btn-save-evidence" disabled>Save evidence snapshot</button>
+          <a class="btn btn-ghost btn-sm" id="link-traffic-lab" href="#" hidden>Open this policy in Traffic Lab ↗</a>
+          <span id="save-evidence-result"></span>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="/static/lab_common.js"></script>
+<script src="/static/nav_partial.js"></script>
+<script src="/static/protocols.js"></script>
+</body>
+</html>

@@ -21,7 +21,7 @@ EXPECTED = {
     r"^[a-z0-9.]+@[a-z]+$": "LOW",
     r"^Bearer [A-Za-z0-9._-]+$": "LOW",
     r"^(ab|a)*c$": "LOW",
-    r"(a+)+": "LOW",   # unanchored: every pumped input is accepted, so not exploitable
+    r"(a+)+": "UNKNOWN",  # no rejecting witness is not a proof of cheap backtracking
 }
 
 

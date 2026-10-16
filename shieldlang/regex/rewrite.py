@@ -251,13 +251,20 @@ def rewrite(source: str, flags: str, analyse: Callable[[str, str], object], max_
             except Exception as exc:  # candidate did not even parse
                 res.rejected.append({"rule": rule, "candidate": new_src, "reason": f"invalid: {exc}"})
                 continue
-            eq, cex = equivalent(cur.dfa, cand.dfa)
+            try:
+                eq, cex = equivalent(cur.dfa, cand.dfa)
+            except Exception as exc:
+                res.rejected.append({"rule": rule, "candidate": new_src, "reason": f"verification incomplete: {exc}"})
+                continue
             if not eq:
                 res.rejected.append({"rule": rule, "candidate": new_src,
                                      "reason": f"not equivalent — distinguishing input {cex!r}"})
                 continue
             if RISK_ORDER[cand.redos.risk] > RISK_ORDER[cur.redos.risk]:
                 res.rejected.append({"rule": rule, "candidate": new_src, "reason": "risk would increase"})
+                continue
+            if cand.redos.risk == "UNKNOWN":
+                res.rejected.append({"rule": rule, "candidate": new_src, "reason": "candidate risk is unverified"})
                 continue
             res.steps.append(RewriteStep(rule, desc, cur.source, new_src, True,
                                          (cur.dfa.n, cand.dfa.n), cur.redos.risk, cand.redos.risk))
