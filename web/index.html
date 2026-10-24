@@ -3,75 +3,71 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ShieldLang Studio</title>
+  <title>Policy Studio · ShieldLang Studio</title>
+  <meta name="description" content="ShieldLang Studio: write API security rules, see every compiler phase, test requests and download validators.">
+  <link rel="stylesheet" href="/static/theme.css">
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%23121212'/%3E%3Cpath d='M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z' fill='%232448D8'/%3E%3Cpath d='M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z' fill='%237B1E3C'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%230F1115'/%3E%3Cpath d='M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z' fill='%231F3FBF'/%3E%3Cpath d='M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z' fill='%2374172F'/%3E%3C/svg%3E">
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-        <path d="M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z" fill="#F3ECE0"/>
-        <path d="M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z" fill="#2448D8"/>
-        <path d="M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z" fill="#7B1E3C"/>
-      </svg>
-      <div>
-        <div class="brand-name">ShieldLang <span>Studio</span></div>
-        <div class="brand-sub">Write policies. Inspect optimizations. Test the difference.</div>
-      </div>
-    </div>
-    <div class="top-actions">
-      <a class="btn btn-ghost" href="/" style="text-decoration:none">Guided demo ↗</a>
-      <a class="btn btn-ghost" href="/protocols" style="text-decoration:none">Protocol Studio ↗</a>
-      <a class="btn btn-ghost" href="/traffic" style="text-decoration:none">Traffic Lab ↗</a>
-      <a class="btn btn-ghost" href="/lab/bypasses" style="text-decoration:none">Bypass Lab ↗</a>
-      <label class="select-wrap" title="Load an example program">
+<body class="studio" data-page="/studio">
+  <a class="skip-link" href="#source">Skip to the editor</a>
+  <header class="app-topbar studio-topbar">
+  <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="app-sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <a class="app-brand" href="/" aria-label="ShieldLang home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z" fill="#F6F3EE"/><path d="M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z" fill="#3D5BDB"/><path d="M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z" fill="#8E2341"/></svg><b>ShieldLang</b></a>
+  <nav class="app-crumbs" aria-label="Breadcrumb"><span>Build</span><span class="sep">/</span><b>Policy Studio</b></nav>
+  <div class="app-topbar-actions"><label class="select-wrap" title="Load an example program">
         <span>Example</span>
-        <select id="example-select"></select>
+        <select id="example-select" aria-label="Example program"></select>
       </label>
       <label class="toggle" title="Recompile automatically while typing">
         <input type="checkbox" id="live-toggle" checked>
-        <span class="toggle-ui"></span><span>Live</span>
+        <span class="toggle-ui"></span><span>Live compile</span>
       </label>
-      <button class="btn btn-ghost" id="btn-download-py" title="Download generated Python validator">.py</button>
-      <button class="btn btn-ghost" id="btn-download-js" title="Download generated JavaScript validator">.js</button>
+      <span class="topbar-sep" aria-hidden="true"></span>
+      <div class="btn-group" role="group" aria-label="Download generated validator">
+        <button class="btn btn-ghost btn-sm" id="btn-download-py" title="Download the generated Python validator"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16h12"/></svg> Python</button>
+        <button class="btn btn-ghost btn-sm" id="btn-download-js" title="Download the generated JavaScript validator">JavaScript</button>
+      </div>
       <button class="btn btn-primary" id="btn-compile" title="Compile (Ctrl/⌘ + Enter)">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
         Compile
-      </button>
-    </div>
-  </header>
-
-  <nav class="pipeline" id="pipeline" aria-label="Compiler phases"></nav>
-
-  <main class="workspace">
-    <section class="editor-col">
-      <div class="card editor-card">
-        <div class="card-head editor-head">
-          <div class="file-tab"><span class="dot"></span><span id="file-name">payments.shl</span></div>
-          <div class="editor-meta"><span id="cursor-pos">Ln 1, Col 1</span><span id="diag-counts"></span></div>
-        </div>
-        <div class="editor" id="editor">
-          <div class="gutter" id="gutter"></div>
-          <div class="code-area">
-            <pre class="highlight" id="highlight" aria-hidden="true"></pre>
-            <textarea id="source" aria-label="ShieldLang policy source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+      </button></div>
+</header>
+  <div class="app-frame">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+    <div class="studio-main">
+      <nav class="pipeline" id="pipeline" aria-label="Compiler phases"></nav>
+      <main class="workspace" id="main">
+        <section class="editor-col" aria-label="Policy source">
+          <div class="card editor-card">
+            <div class="card-head editor-head">
+              <div class="file-tab"><span class="dot"></span><span id="file-name">payments.shl</span></div>
+              <div class="editor-meta"><span id="cursor-pos">Ln 1, Col 1</span><span id="diag-counts"></span></div>
+            </div>
+            <div class="editor" id="editor">
+              <div class="gutter" id="gutter"></div>
+              <div class="code-area">
+                <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+                <textarea id="source" aria-label="ShieldLang policy source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div class="card diag-card">
-        <div class="card-head"><h3>Diagnostics</h3><span class="muted small" id="diag-summary"></span></div>
-        <div class="diag-list" id="diag-list"></div>
-      </div>
-    </section>
+          <div class="card diag-card">
+            <div class="card-head"><h3>Problems</h3><span class="muted small" id="diag-summary"></span></div>
+            <div class="diag-list" id="diag-list"></div>
+          </div>
+        </section>
 
-    <section class="panel-col">
-      <div class="tabs" id="tabs" role="tablist"></div>
-      <div class="panel" id="panel"></div>
-    </section>
-  </main>
+        <section class="panel-col" aria-label="Compiler results">
+          <div class="tabs" id="tabs" role="tablist"></div>
+          <div class="panel" id="panel"></div>
+        </section>
+      </main>
+    </div>
+  </div>
 
   <div class="toast" id="toast" role="status"></div>
+  <script src="/static/shell.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

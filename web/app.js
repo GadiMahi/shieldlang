@@ -326,11 +326,16 @@ function renderDiagnostics() {
 }
 
 /* ------------------------------------------------------------------ tabs */
-const TABS = [
-  ["overview", "Overview"], ["verification", "Verification"], ["compare", "Policy changes"],
-  ["tokens", "Tokens"], ["ast", "AST"], ["symbols", "Symbols"], ["regex", "RegexShield"],
-  ["ir", "IR"], ["opt", "Optimiser"], ["code", "Code"], ["run", "Run"], ["bench", "Benchmark"],
+const TAB_GROUPS = [
+  ["results", "Results", "What the compiler concluded", [
+    ["overview", "Summary"], ["regex", "Security"], ["verification", "Verification"], ["compare", "Compare versions"]]],
+  ["try", "Try it", "Run the compiled rules", [["run", "Test a request"], ["bench", "Benchmark"]]],
+  ["internals", "Under the hood", "Every compiler phase", [
+    ["tokens", "Tokens"], ["ast", "Syntax tree"], ["symbols", "Symbols"], ["ir", "Intermediate code"],
+    ["opt", "Optimiser"], ["code", "Generated code"]]],
 ];
+const TABS = TAB_GROUPS.flatMap((g) => g[3]);
+const groupOf = (key) => TAB_GROUPS.find((g) => g[3].some(([k]) => k === key)) || TAB_GROUPS[0];
 
 function setTab(t) {
   S.tab = t;
@@ -343,15 +348,27 @@ function renderTabs() {
   const el = $("#tabs");
   el.innerHTML = "";
   const r = S.res;
-  for (const [key, label] of TABS) {
+  const current = groupOf(S.tab);
+  const risky = r && r.report ? (r.report.counts.HIGH || 0) + (r.report.counts.MEDIUM || 0) : 0;
+  const groups = h("div", { class: "tab-groups", role: "group", "aria-label": "Result sections" });
+  for (const g of TAB_GROUPS) {
+    const [gkey, glabel, , items] = g;
+    const on = g === current;
+    groups.append(h("button", { class: `tab-group ${on ? "active" : ""}`, type: "button", "aria-pressed": String(on),
+      onclick: () => setTab(on ? S.tab : items[0][0]) }, glabel, gkey === "results" && risky ? h("span", { class: "gdot", title: `${risky} risky pattern(s)` }) : null));
+  }
+  groups.append(h("span", { class: "tab-hint" }, current[2]));
+  el.append(groups);
+  const row = h("div", { class: "tab-row" });
+  for (const [key, label] of current[3]) {
     let badge = null;
     if (r && key === "tokens") badge = h("span", { class: "badge-n" }, r.tokens.length - 1);
     if (r && key === "regex" && r.report) {
-      const bad = (r.report.counts.HIGH || 0) + (r.report.counts.MEDIUM || 0);
-      badge = h("span", { class: `badge-n ${bad ? "wine" : ""}` }, bad ? `${bad} risky` : Object.keys(r.regexes || {}).length);
+      badge = h("span", { class: `badge-n ${risky ? "wine" : ""}` }, risky ? `${risky} risky` : Object.keys(r.regexes || {}).length);
     }
-    el.append(h("button", { class: `tab ${S.tab === key ? "active" : ""}`, role: "tab", "aria-selected": String(S.tab === key), onclick: () => setTab(key) }, label, badge));
+    row.append(h("button", { class: `tab ${S.tab === key ? "active" : ""}`, role: "tab", "aria-selected": String(S.tab === key), onclick: () => setTab(key) }, label, badge));
   }
+  el.append(row);
 }
 
 function renderPanel() {

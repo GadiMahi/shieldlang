@@ -3,48 +3,54 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ShieldLang · Bypass Lab</title>
+<title>Bypass Lab · ShieldLang</title>
 <meta name="description" content="Search declared local normalization experiments, confirm interpretation mismatches by replay, and reduce reproducible findings.">
-<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/theme.css">
 <link rel="stylesheet" href="/static/lab_common.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%23121212'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%230F1115'/%3E%3Cpath d='M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z' fill='%231F3FBF'/%3E%3Cpath d='M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z' fill='%2374172F'/%3E%3C/svg%3E">
 </head>
 <body class="lab" data-page="/lab/bypasses">
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="lab-topbar">
-  <div class="lab-brand">Bypass Lab <span class="tag">bounded local experiments</span></div>
-  <span id="shared-nav"></span>
+<header class="app-topbar lab-topbar">
+  <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="app-sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <a class="app-brand" href="/" aria-label="ShieldLang home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z" fill="#F6F3EE"/><path d="M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z" fill="#3D5BDB"/><path d="M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z" fill="#8E2341"/></svg><b>ShieldLang</b></a>
+  <nav class="app-crumbs" aria-label="Breadcrumb"><span>Test</span><span class="sep">/</span><b>Bypass Lab</b></nav>
+  <div class="app-topbar-actions"><a class="btn btn-ghost btn-sm" href="#about">How it works</a></div>
 </header>
-<main class="lab-main" id="main">
+<div class="app-frame">
+<aside class="app-sidebar" id="app-sidebar"></aside>
+<main class="app-main lab-main" id="main"><div class="page">
 
-  <section class="lab-hero" aria-labelledby="hero-h">
-    <h1 id="hero-h">Bypass Lab</h1>
-    <p class="lead">A filter and the application behind it are two programs, and they don't always read the <b>same bytes the same way</b>. If the filter checks one
-      interpretation (say, the raw text) and the application acts on another (say, after decoding percent-escapes), an input can look harmless to the filter and
-      harmful to the application. Search a declared local experiment, inspect both readings, and reduce a replay-confirmed finding to its essential input.</p>
-    <ol class="lab-flow">
-      <li>Pick a fixture</li>
-      <li>Pick or type a candidate</li>
-      <li>See both interpretations</li>
-      <li>Read the verdict and local replay</li>
+  <header class="page-head" aria-labelledby="hero-h">
+    <div class="eyebrow">Test · Input interpretation</div>
+    <h1 class="page-title" id="hero-h">Bypass Lab</h1>
+    <p class="page-lede">A filter and the application behind it can read the <b>same text differently</b> — for example, the app decodes <code>%2e</code> or
+      full-width characters that the filter never saw. Search for inputs that slip past the filter, see both readings side by side, and shrink each finding to its essence.</p>
+    <ol class="lab-flow stepper">
+      <li>Pick a scenario</li>
+      <li>Pick or type an input</li>
+      <li>Compare both readings</li>
+      <li>Read the verdict</li>
     </ol>
-    <p class="lab-help warn" style="margin-top:14px"><b>What is searched:</b> only the selected fixture's declared transformations and local application. Seeds come from its oracle, not the preset bypass examples.
-      A finding requires policy acceptance, an oracle violation, and local replay. No finding within a budget is not proof of safety. Reduction preserves replay; it does not promise the shortest possible input.
-      The fixture policy applies the oracle predicate to its own interpretation; it is not a compiled .shl policy. These experiments do not scan external websites or arbitrary ShieldLang policies.</p>
-    <details class="lab-gloss">
-      <summary>Plain-English glossary (click to open)</summary>
-      <dl>
-        <dt>Fixture</dt><dd>One named scenario: where the input goes (a body field, a path parameter), how the <b>policy</b> reads it, how the <b>application</b> reads it, and what counts as a violation.</dd>
-        <dt>Pipeline / stage</dt><dd>The ordered steps a side applies to the raw text before using it — e.g. <code>percent_decode</code>, <code>nfkc</code>, <code>strip_nul</code>. Different pipelines are what create the mismatch.</dd>
-        <dt>Policy-side view</dt><dd>What the filter ends up checking after its pipeline.</dd>
-        <dt>App-side view</dt><dd>What the application ends up using after its pipeline.</dd>
-        <dt>Oracle</dt><dd>An independent definition of “this is a violation” (for example “contains &lt;script” or “escapes the allowed folder”). It is evaluated on the <b>app's</b> view and shares no code with the policy.</dd>
-        <dt>Local replay</dt><dd>The candidate is actually sent (loopback only) to a tiny local fixture application, to confirm the app really behaves the way the model says.</dd>
-        <dt>Confirmed</dt><dd>All three at once: the policy would <b>accept</b> it, the oracle says the app's view is a <b>violation</b>, and the replay <b>confirms</b> it. Anything less is “not confirmed”.</dd>
-        <dt>Negative control</dt><dd>A fixture where both sides read input identically. It exists to show the lab doesn't cry wolf.</dd>
-      </dl>
+    <details class="about lab-gloss" id="about">
+      <summary>How this page works <span class="muted">· glossary</span></summary>
+      <div class="about-body">
+        <p>If the filter checks one interpretation (say, the raw text) and the application acts on another (say, after decoding percent-escapes),
+          an input can look harmless to the filter and harmful to the application. Each scenario (“fixture”) declares both pipelines and what counts as a violation.</p>
+        <dl>
+          <dt>Fixture</dt><dd>One named scenario: where the input goes, how the <b>policy</b> reads it, how the <b>application</b> reads it, and what counts as a violation.</dd>
+          <dt>Pipeline</dt><dd>The ordered steps a side applies before using the text — e.g. <code>percent_decode</code>, <code>nfkc</code>, <code>strip_nul</code>.</dd>
+          <dt>Policy view / App view</dt><dd>What the filter ends up checking, and what the application ends up using.</dd>
+          <dt>Oracle</dt><dd>An independent definition of “violation” (e.g. “contains &lt;script”), evaluated on the app’s view.</dd>
+          <dt>Local replay</dt><dd>The input is actually sent (loopback only) to a tiny local fixture app to confirm the behaviour.</dd>
+          <dt>Confirmed</dt><dd>All three at once: the policy accepts it, the oracle flags the app’s view, and the replay confirms it.</dd>
+          <dt>Negative control</dt><dd>A fixture where both sides read input identically — it shows the lab doesn’t cry wolf.</dd>
+        </dl>
+      </div>
     </details>
-  </section>
+    <p class="lab-help warn" style="margin-top:14px"><b>Scope.</b> What is searched: only the selected fixture's declared transformations and local application. Seeds come from its oracle, not the preset bypass examples.
+      A finding needs policy acceptance, an oracle violation and local replay; no finding within a budget is not proof of safety. These experiments never scan external websites or arbitrary .shl policies.</p>
+  </header>
 
   <div id="banner-area"></div>
 
@@ -53,62 +59,62 @@
       <p class="lab-col-title">Set up</p>
 
       <section class="lab-card">
-        <h2><span class="step-no">1</span> Pick a fixture</h2>
-        <p class="lab-help"><b>What you're choosing:</b> a pair of readings (policy vs application) and a definition of “violation”. The diagram below shows both pipelines.</p>
-        <select id="fixture-select" class="lab-select" style="width:100%; margin-bottom:10px" aria-label="Fixture"></select>
+        <h2><span class="step-no">1</span> Pick a scenario</h2>
+        <p class="lab-help">Each scenario pairs a policy reading with an application reading. The diagram shows both pipelines.</p>
+        <select id="fixture-select" class="lab-select" style="width:100%; margin-bottom:12px" aria-label="Fixture"></select>
         <div id="fixture-detail" class="lab-empty"></div>
       </section>
 
       <section class="lab-card">
-        <h2><span class="step-no">2</span> Pick or type a candidate</h2>
-        <p class="lab-help"><b>Candidate</b> = the raw text that will be run through both pipelines. The buttons load the fixture's own examples; you can edit them or type anything.
-          Use manual evaluation below, or let the bounded search generate variations from the fixture oracle.</p>
+        <h2><span class="step-no">2</span> Pick or type an input</h2>
+        <p class="lab-help">The buttons load the scenario’s own examples; edit them or type anything. Evaluate it by hand, or let the search below generate variations.</p>
         <div id="candidate-presets" class="lab-chips"></div>
         <textarea id="candidate-input" class="lab-editor" style="min-height:90px; height:110px" spellcheck="false" aria-label="Candidate input"></textarea>
-        <div class="lab-row" style="margin-top:10px; margin-bottom:0">
-          <label class="lab-field" style="flex:1 1 240px; flex-direction:row; align-items:center; gap:6px; font-weight:500"><input type="checkbox" id="replay-toggle" checked style="width:auto"> Also replay it against the local fixture app</label>
-          <button class="btn btn-primary" id="btn-run">Evaluate this candidate</button>
+        <div class="lab-row" style="margin-top:12px; margin-bottom:0">
+          <label class="lab-field" style="flex:1 1 240px; flex-direction:row; align-items:center; gap:8px; font-weight:500"><input type="checkbox" id="replay-toggle" checked style="width:auto"> Also replay it against the local fixture app</label>
+          <button class="btn btn-primary" id="btn-run">Evaluate this input</button>
         </div>
       </section>
 
       <section class="lab-card" aria-labelledby="search-heading">
-        <h2 id="search-heading">Search and reduce</h2>
-        <p class="lab-help">Generate candidates using the declared transformations. The numeric seed makes mutation order reproducible; time limits can still truncate a run.</p>
+        <h2 id="search-heading">Search automatically</h2>
+        <p class="lab-help">Generate inputs from the scenario’s declared transformations. The seed makes the order reproducible.</p>
         <div class="lab-row">
           <label class="lab-field">Candidate budget<input id="search-budget" type="number" min="1" max="1024" value="128"></label>
           <label class="lab-field">Mutation depth<input id="search-depth" type="number" min="0" max="3" value="2"></label>
           <label class="lab-field">Random seed<input id="search-seed" type="number" min="0" max="4294967295" value="0"></label>
         </div>
-        <label><input id="search-reduce" type="checkbox" checked> Reduce search findings with replay</label>
-        <div class="lab-row" style="margin-top:12px">
-          <button class="btn btn-primary" id="btn-search">Search this experiment</button>
-          <button class="btn btn-ghost" id="btn-minimize">Minimize typed candidate</button>
+        <label class="lab-help" style="display:flex; gap:8px; align-items:center"><input id="search-reduce" type="checkbox" checked> Shrink each finding while it still replays</label>
+        <div class="lab-row" style="margin-top:4px">
+          <button class="btn btn-primary" id="btn-search">Search this scenario</button>
+          <button class="btn btn-secondary" id="btn-minimize">Shrink my input</button>
         </div>
-        <p class="lab-footnote">Up to 3 findings, 80 reduction checks per finding and a shared 5-second evaluation budget. Local replay is required for confirmed findings.</p>
+        <p class="lab-footnote">Up to 3 findings, 80 reduction checks each, within a shared 5-second budget. Confirmed findings always require local replay.</p>
         <p id="search-status" role="status" aria-live="polite"></p>
       </section>
     </div>
 
     <div class="lab-col">
-      <p class="lab-col-title">What happened</p>
+      <p class="lab-col-title">Result</p>
 
       <section class="lab-card">
-        <h2><span class="step-no">3</span> Result</h2>
-        <p class="lab-help"><b>How to read it.</b> Top to bottom: what you typed, how each side read it, whether the policy would accept it, whether the independent oracle calls the app's reading a violation,
-          and what the local replay showed. A plain-language verdict is at the top.</p>
-        <div id="result-area" class="lab-empty" aria-live="polite">Evaluate a candidate or search this experiment.</div>
+        <h2><span class="step-no">3</span> Verdict</h2>
+        <p class="lab-help">A plain-language verdict first, then: your input, how each side read it, the policy decision, the oracle’s view and the local replay.</p>
+        <div id="result-area" class="lab-empty" aria-live="polite">Evaluate an input or search this scenario.</div>
       </section>
 
       <section class="lab-card">
         <h2>Past runs</h2>
-        <p class="lab-help">Each evaluation is stored with a run id. Open one to reload its fixture, candidate and result.</p>
-        <div id="runs-list" class="lab-empty">—</div>
+        <p class="lab-help">Each evaluation is stored with a run id. Open one to reload its scenario, input and result.</p>
+        <div id="runs-list" class="lab-empty">No runs yet.</div>
       </section>
     </div>
   </div>
-</main>
+
+</div></main>
+</div>
+<script src="/static/shell.js"></script>
 <script src="/static/lab_common.js"></script>
-<script src="/static/nav_partial.js"></script>
 <script src="/static/bypasses.js"></script>
 </body>
 </html>

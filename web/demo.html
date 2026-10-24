@@ -3,73 +3,125 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Explore ShieldLang: an API policy compiler with inspectable transformations and concrete policy-change examples.">
+  <meta name="description" content="ShieldLang: a language and compiler for API security rules — checked, repaired with proof, and compiled to linear-time validators.">
   <title>ShieldLang — Rules in. Reasoning out.</title>
+  <link rel="stylesheet" href="/static/theme.css">
   <link rel="stylesheet" href="/static/demo.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6v9c0 7 5 12 12 15 7-3 12-8 12-15V6Z' fill='%232448d8'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z' fill='%230F1115'/%3E%3Cpath d='M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z' fill='%231F3FBF'/%3E%3Cpath d='M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z' fill='%2374172F'/%3E%3C/svg%3E">
   <script src="/static/demo.js" defer></script>
 </head>
-<body>
-  <a class="skip-link" href="#walkthrough">Skip to the interactive demo</a>
-  <header class="site-header shell">
-    <a class="wordmark" href="#" aria-label="ShieldLang home"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 3 7v10c0 8 6 14 13 17 7-3 13-9 13-17V7Z" fill="currentColor"/><path d="M16 7 8 10v7c0 5 3 9 8 12Z" fill="#f3eee5"/></svg><span>ShieldLang<span class="wordmark-dot">.</span></span></a>
-    <nav aria-label="Main navigation"><a href="#idea">The idea</a><a href="#walkthrough">Try it</a><a href="#boundaries">The boundaries</a><span class="nav-sep" aria-hidden="true">·</span><a href="/protocols">Protocol Studio</a><a href="/traffic">Traffic Lab</a><a href="/lab/bypasses">Bypass Lab</a></nav>
-    <a class="studio-link" href="/studio">Open Studio <span aria-hidden="true">↗</span></a>
-  </header>
+<body class="home" data-page="/">
+  <a class="skip-link" href="#walkthrough">Skip to the guided tour</a>
+  <header class="app-topbar home-topbar">
+  <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="app-sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <a class="app-brand" href="/" aria-label="ShieldLang home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 6.5v8.2C4 22.6 9.2 28 16 30c6.8-2 12-7.4 12-15.3V6.5Z" fill="#F6F3EE"/><path d="M16 6.2 8 9.3v5.6c0 5.3 3.3 9.1 8 10.8Z" fill="#3D5BDB"/><path d="M16 6.2v19.5c4.7-1.7 8-5.5 8-10.8V9.3Z" fill="#8E2341"/></svg><b>ShieldLang</b></a>
+  <nav class="app-crumbs" aria-label="Breadcrumb"><span>Start</span><span class="sep">/</span><b>Home</b></nav>
+  <div class="app-topbar-actions"><a class="btn btn-ghost btn-sm" href="#walkthrough">Guided tour</a><a class="btn btn-primary btn-sm" href="/studio">Open Policy Studio</a></div>
+</header>
+  <div class="app-frame">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+    <main class="app-main" id="main"><div class="page home-page">
 
-  <main>
-    <section class="hero shell" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="signal-dot"></span> A language for API validation</div>
-        <h1 id="hero-title">Rules in.<br><span>Reasoning</span><br>out.</h1>
-        <p class="hero-description">Write a policy. Follow its compilation. See which transformations preserve field acceptance—and which requests change their verdict.</p>
-        <div class="hero-actions"><a class="button button-blue" href="#walkthrough">Run the walkthrough <span aria-hidden="true">↘</span></a><a class="text-link" href="/studio">Go straight to Studio ↗</a></div>
-        <p class="hero-footnote">A working compiler prototype. Real results, explicit limits.</p>
-      </div>
-      <div class="compiler-art" aria-label="Illustration of a policy becoming intermediate code and a validator">
-        <div class="art-grid"></div>
-        <div class="art-topline"><span>INSIDE THE COMPILER</span><span>01 → 08</span></div>
-        <div class="art-source"><span class="art-file">account.shl</span><code><span class="code-blue">field</span> username : <span class="code-sand">string</span><br>&nbsp; matches <span class="code-pink">/^[a-z]+$/</span><br>&nbsp; minlen <span class="code-sand">3</span> maxlen <span class="code-sand">12</span>;</code></div>
-        <div class="art-flow" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="art-middle"><div><span class="art-stage">INTERMEDIATE CODE</span><code>LOAD → CHECK → MATCH</code></div><div class="art-stamp">SIR</div></div>
-        <svg class="automaton" viewBox="0 0 460 140" aria-hidden="true"><defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7" fill="none" stroke="currentColor"/></marker></defs><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 82H65M111 82H197M243 82H329" marker-end="url(#arrow)"/><path d="M210 60C170 8 275 8 234 60" marker-end="url(#arrow)"/><circle cx="88" cy="82" r="22"/><circle cx="220" cy="82" r="22"/><circle cx="352" cy="82" r="22"/><circle cx="352" cy="82" r="16"/></g><g fill="currentColor" font-family="Consolas, monospace" font-size="12" text-anchor="middle"><text x="88" y="86">q₀</text><text x="220" y="86">q₁</text><text x="352" y="86">q₂</text><text x="153" y="69">a–z</text><text x="286" y="69">a–z</text><text x="220" y="22">a–z</text></g></svg>
-        <div class="art-bottom"><span>A transition, not a backtrack.</span><span class="art-caption">Pipeline illustration</span></div>
-        <div class="art-corner" aria-hidden="true">{ }</div>
-      </div>
-    </section>
-
-    <div class="capability-strip shell" aria-label="Three compiler capabilities"><span><b>01</b> Policy language</span><span><b>02</b> Transformation checks</span><span><b>03</b> Change witnesses</span></div>
-
-    <section class="idea-section" id="idea" aria-labelledby="idea-title"><div class="shell idea-grid">
-      <div><div class="eyebrow light">Beyond one regular expression</div><h2 id="idea-title">A verdict is useful.<br><em>An explanation<br>is better.</em></h2></div>
-      <div class="idea-copy"><p>RegexShield began with a question: could a regular expression cause expensive backtracking?</p><p>ShieldLang extends that work into a language for complete API validation policies. Its compiler checks declarations, builds intermediate code, applies optimizations, and emits Python and JavaScript validators.</p><p>The next questions are just as important: <strong>did the transformation preserve the field’s language? What request behaves differently after a policy edit?</strong></p><a class="text-link light" href="#walkthrough">Follow one policy through the answers ↓</a></div>
-    </div></section>
-
-    <section class="walkthrough shell" id="walkthrough" aria-labelledby="walkthrough-title">
-      <div class="section-heading"><div><div class="eyebrow">Not a prerecorded animation</div><h2 id="walkthrough-title">Meet the compiler.<br>One decision at a time.</h2></div><p>These controls call the same local compiler as Studio. Edit the example, inspect the results, and take any policy into the full workbench.</p></div>
-      <div class="demo-toolbar"><span class="connection-status" id="connection-status" role="status"><span class="signal-dot"></span> Connecting to the local compiler…</span><button class="quiet-button" id="reset-demo" type="button">Reset example ↺</button></div>
-      <div class="demo-frame">
-        <div class="step-tabs" role="tablist" aria-label="Guided compiler walkthrough">
-          <button id="step-1" role="tab" aria-selected="true" aria-controls="demo-panel" data-step="1"><span>01</span> Write a policy</button>
-          <button id="step-2" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="2"><span>02</span> Compile</button>
-          <button id="step-3" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="3"><span>03</span> Verify</button>
-          <button id="step-4" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="4"><span>04</span> Compare</button>
-          <button id="step-5" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="5"><span>05</span> Replay & export</button>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow">ShieldLang · API security compiler</div>
+          <h1 class="hero-title" id="hero-title">Rules in. <em>Reasoning out.</em></h1>
+          <p class="hero-lede">Write the security rules for your API in plain, readable lines. ShieldLang checks them for mistakes, finds and repairs dangerous
+            regular expressions with proof, and compiles everything into fast Python and JavaScript validators that attackers cannot slow down.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="#walkthrough">Take the 5-minute tour</a>
+            <a class="btn btn-secondary btn-lg" href="/studio">Open Policy Studio</a>
+          </div>
         </div>
-        <div class="demo-panel" id="demo-panel" role="tabpanel" aria-labelledby="step-1" tabindex="0"></div>
-        <div class="demo-bottom"><span id="step-caption">01 / 05 — A small policy with real consequences.</span><a href="/studio" id="open-in-studio">Open this policy in Studio ↗</a></div>
-      </div>
-      <p class="demo-note">The example account endpoint is illustrative. Compiler output and request verdicts are computed live.</p>
-    </section>
+        <figure class="hero-sample" aria-label="Example ShieldLang rule">
+          <figcaption><span>payment.shl</span><span class="ok-dot">compiled · linear time</span></figcaption>
+<pre><span class="k">rule</span> CreatePayment <span class="k">on</span> <b>POST</b> <span class="s">"/api/pay"</span> {
+  <span class="k">field</span> amount : <span class="t">number</span> <span class="c">in</span> 1..100000;
+  <span class="k">field</span> method : <span class="t">enum</span>(<span class="s">"upi"</span>, <span class="s">"card"</span>);
+  <span class="k">field</span> card?  : <span class="t">string</span> <span class="c">matches</span> <span class="r">/^[0-9]{16}$/</span>;
+  <span class="k">when</span> method == <span class="s">"card"</span> <span class="k">require</span> card;
+}</pre>
+        </figure>
+      </section>
 
-    <section class="boundaries shell" id="boundaries" aria-labelledby="boundary-title">
-      <div class="boundary-title"><div class="eyebrow">Trust starts with a boundary</div><h2 id="boundary-title">Know what<br>the result means.</h2><a class="text-link" href="/studio">Inspect the full evidence in Studio ↗</a></div>
-      <div class="boundary-list"><article><span>01</span><div><h3>Matching without backtracking.</h3><p>Generated regex checks use DFA transitions. This does not establish bounded compilation cost or make every surrounding request operation safe.</p></div></article><article><span>02</span><div><h3>Field equivalence, with coverage.</h3><p>The checker supports scalar string fields, presence, length, enums, and DFA checks. Conditions, scans, error behavior, numbers, lists, and generated code are outside that check.</p></div></article><article><span>03</span><div><h3>A witness proves a difference.</h3><p>A displayed request is replayed against both policy VMs. No witness does not prove that the policies are equivalent. Unsupported and incomplete results remain visible.</p></div></article></div>
-    </section>
+      <section class="how" aria-labelledby="how-title">
+        <h2 class="section-h" id="how-title">How it works</h2>
+        <ol class="how-steps">
+          <li><b>Write rules</b><span>Describe each endpoint: fields, types, limits, patterns and cross-field conditions.</span></li>
+          <li><b>Check them</b><span>The compiler catches contradictions and impossible rules before anything is deployed.</span></li>
+          <li><b>Repair risky patterns</b><span>Regexes that could freeze a server are flagged, proven with an attack string and safely rewritten.</span></li>
+          <li><b>Generate validators</b><span>Optimised Python and JavaScript code that checks every request in linear time.</span></li>
+        </ol>
+      </section>
 
-    <section class="closing shell"><div class="eyebrow">For the questions after the demonstration</div><h2>Now open<br><em>the workbench.</em></h2><a class="button button-ink" href="/studio">Explore ShieldLang Studio <span aria-hidden="true">↗</span></a><p>Source. Diagnostics. AST. Intermediate code.<br>The machinery is there to inspect.</p></section>
-  </main>
-  <footer class="shell site-footer"><a class="wordmark" href="#">ShieldLang.</a><span>Compiler design · Research prototype</span><a href="/studio">Studio ↗</a></footer>
+      <section aria-labelledby="start-title">
+        <h2 class="section-h" id="start-title">Where would you like to start?</h2>
+        <div class="start-grid">
+        <a class="start-card" href="/studio">
+          <span class="start-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6 3 12l5 6M16 6l5 6-5 6M14 4l-4 16"/></svg></span>
+          <span class="start-kicker">Build</span>
+          <span class="start-title">Policy Studio</span>
+          <span class="start-text">Write rules and see problems as you type. Inspect security findings, every compiler phase and the generated code.</span>
+          <span class="start-cta">Open Studio <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></span>
+        </a>
+        <a class="start-card" href="/protocols">
+          <span class="start-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/><path d="M7.2 12h2.6M14.2 12h2.6"/></svg></span>
+          <span class="start-kicker">Test</span>
+          <span class="start-title">Protocol Studio</span>
+          <span class="start-text">Enforce the order of requests — created, then paid, then confirmed — and watch how the gateway handles failures.</span>
+          <span class="start-cta">Try protocols <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></span>
+        </a>
+        <a class="start-card" href="/traffic">
+          <span class="start-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h4l3-10 4 14 3-8h4"/></svg></span>
+          <span class="start-kicker">Test</span>
+          <span class="start-title">Traffic Lab</span>
+          <span class="start-text">Replay recorded traffic, legitimate and malicious, and compare the gateway’s decisions with what really happened.</span>
+          <span class="start-cta">Replay traffic <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></span>
+        </a>
+        <a class="start-card" href="/lab/bypasses">
+          <span class="start-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/></svg></span>
+          <span class="start-kicker">Test</span>
+          <span class="start-title">Bypass Lab</span>
+          <span class="start-text">Search for inputs that slip past a filter because the filter and the app read the same text differently.</span>
+          <span class="start-cta">Find bypasses <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></span>
+        </a>
+        </div>
+      </section>
+
+      <section class="walkthrough" id="walkthrough" aria-labelledby="walkthrough-title">
+        <div class="section-row">
+          <div>
+            <h2 class="section-h" id="walkthrough-title">Guided tour</h2>
+            <p class="section-sub">Five steps with a real policy, using the same local compiler as Studio. Edit anything — every result is computed live.</p>
+          </div>
+          <div class="demo-toolbar"><span class="connection-status" id="connection-status" role="status"><span class="signal-dot"></span> Connecting to the local compiler…</span><button class="btn btn-secondary btn-sm" id="reset-demo" type="button">Reset example</button></div>
+        </div>
+        <div class="demo-frame">
+          <div class="step-tabs" role="tablist" aria-label="Guided compiler walkthrough">
+            <button id="step-1" role="tab" aria-selected="true" aria-controls="demo-panel" data-step="1"><span>1</span> Write a policy</button>
+            <button id="step-2" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="2"><span>2</span> Compile</button>
+            <button id="step-3" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="3"><span>3</span> Verify</button>
+            <button id="step-4" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="4"><span>4</span> Compare</button>
+            <button id="step-5" role="tab" aria-selected="false" aria-controls="demo-panel" data-step="5"><span>5</span> Replay &amp; export</button>
+          </div>
+          <div class="demo-panel" id="demo-panel" role="tabpanel" aria-labelledby="step-1" tabindex="0"></div>
+          <div class="demo-bottom"><span id="step-caption">01 / 05 — A small policy with real consequences.</span><a href="/studio" id="open-in-studio">Open this policy in Studio ↗</a></div>
+        </div>
+      </section>
+
+      <section class="boundaries" id="boundaries" aria-labelledby="boundary-title">
+        <h2 class="section-h" id="boundary-title">What the results mean</h2>
+        <div class="boundary-list">
+          <article><h3>Matching without backtracking</h3><p>Generated pattern checks use DFA transitions, so matching is linear in the input. This does not bound compilation cost or make every surrounding request operation safe.</p></article>
+          <article><h3>Field equivalence, with coverage</h3><p>The checker covers scalar string fields: presence, length, enums and DFA checks. Conditions, scans, error behaviour, numbers, lists and generated code are outside it.</p></article>
+          <article><h3>A witness proves a difference</h3><p>Each shown request is replayed against both policy versions. No witness does not prove the versions are equivalent; unsupported results stay visible.</p></article>
+        </div>
+      </section>
+
+      <footer class="home-foot"><span>ShieldLang · Compiler Design Lab project</span><span>Runs entirely on this machine</span></footer>
+    </div></main>
+  </div>
   <div id="demo-announcement" class="sr-only" role="status" aria-live="polite"></div>
+  <script src="/static/shell.js"></script>
 </body>
 </html>
